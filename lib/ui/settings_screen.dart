@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../data/database.dart';
 import '../domain/backup.dart';
 import '../providers.dart';
+import 'capture_screens.dart';
 import 'common.dart';
 import 'manage_screens.dart';
 
@@ -103,6 +104,13 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('常用模板'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => push(const TemplatesScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: const Text('自動記錄'),
+            subtitle: const Text('讀付款通知、Gmail 收據，Gemini 幫手分類'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => push(const AutoCaptureSettingsScreen()),
           ),
           const Divider(),
           ListTile(

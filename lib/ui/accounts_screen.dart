@@ -6,6 +6,7 @@ import '../data/database.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
+import 'capture_screens.dart';
 import 'common.dart';
 import 'theme.dart';
 import 'transactions_screen.dart';
@@ -300,6 +301,20 @@ class AccountDetailScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (_isOctopus(account)) ...[
+                    IconButton.outlined(
+                      tooltip: '匯入八達通截圖',
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      onPressed: () => importOctopusScreenshots(context, ref),
+                    ),
+                    if (ref.read(notificationBridgeProvider).supported)
+                      IconButton.outlined(
+                        tooltip: '拍卡同步餘額',
+                        icon: const Icon(Icons.contactless_outlined),
+                        onPressed: () => syncOctopusBalance(context, ref, account),
+                      ),
+                    const SizedBox(width: 4),
+                  ],
                   OutlinedButton(
                     onPressed: () async {
                       final v = await promptText(
@@ -328,6 +343,10 @@ class AccountDetailScreen extends ConsumerWidget {
     );
   }
 }
+
+bool _isOctopus(Account a) =>
+    a.type == AccountType.asset &&
+    (a.icon == 'octopus' || a.name.contains('八達通') || a.name.toLowerCase().contains('octopus'));
 
 typedef _Kind = (AccountType, AccountSubtype, String icon);
 

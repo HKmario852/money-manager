@@ -83,7 +83,12 @@ class Ledger {
 
   // ---------------------------------------------------------------- 寫入
 
-  Future<String> saveEntry(EntryDraft d, {String? entryId, EntrySource source = EntrySource.manual}) async {
+  Future<String> saveEntry(
+    EntryDraft d, {
+    String? entryId,
+    EntrySource source = EntrySource.manual,
+    String? externalId,
+  }) async {
     if (d.amount <= 0) throw LedgerException('金額要大過 0');
     if (d.fromAccountId == d.toAccountId) throw LedgerException('兩個賬戶唔可以一樣');
     final from = await _account(d.fromAccountId);
@@ -104,6 +109,7 @@ class Ledger {
                 note: Value(_blankToNull(d.note)),
                 merchant: Value(_blankToNull(d.merchant)),
                 source: Value(source),
+                externalId: Value(externalId),
               ),
             );
       } else {
