@@ -106,19 +106,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     title: Text(a.id == drillParent ? '${a.name}（未分子類）' : a.name),
                     subtitle: ClipRRect(
                       borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: v / sum,
-                        color: colorFor(a, context),
-                        backgroundColor: colorFor(a, context).withValues(alpha: 0.1),
+                      child: ExcludeSemantics(
+                        child: LinearProgressIndicator(
+                          value: v / sum,
+                          color: colorFor(a, context),
+                          backgroundColor: colorFor(a, context).withValues(alpha: 0.1),
+                        ),
                       ),
                     ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(formatMoney(v)),
-                        Text('${(v * 100 / sum).toStringAsFixed(1)}%', style: theme.textTheme.bodySmall),
-                      ],
+                    trailing: SizedBox(
+                      width: 104,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(formatMoney(v)),
+                          Text('${(v * 100 / sum).toStringAsFixed(1)}%', style: theme.textTheme.bodySmall),
+                        ],
+                      ),
                     ),
                     onTap: drillParent == null && accounts.values.any((c) => c.parentId == a.id)
                         ? () => setState(() => drillParent = a.id)
@@ -175,7 +180,7 @@ class _TrendChart extends StatelessWidget {
     return BarChart(
       BarChartData(
         maxY: maxY == 0 ? 100 : maxY / 100 * 1.15,
-        gridData: const FlGridData(show: false),
+        gridData: const FlGridData(drawVerticalLine: false),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
@@ -186,7 +191,16 @@ class _TrendChart extends StatelessWidget {
           ),
         ),
         titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (v, meta) {
+                if (v == meta.max) return const SizedBox();
+                return Text(_compact(v), style: const TextStyle(fontSize: 10));
+              },
+            ),
+          ),
           rightTitles: const AxisTitles(),
           topTitles: const AxisTitles(),
           bottomTitles: AxisTitles(
@@ -270,4 +284,11 @@ class _TagTotals extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// 坐標軸用嘅簡寫，例如 12000 -> 1.2萬
+String _compact(double dollars) {
+  if (dollars >= 10000) return '${(dollars / 10000).toStringAsFixed(dollars % 10000 == 0 ? 0 : 1)}萬';
+  if (dollars >= 1000) return '${(dollars / 1000).toStringAsFixed(dollars % 1000 == 0 ? 0 : 1)}千';
+  return dollars.toStringAsFixed(0);
 }

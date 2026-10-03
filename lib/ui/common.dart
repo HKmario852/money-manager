@@ -208,12 +208,12 @@ class PeriodSwitcher extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => notifier.shift(-1)),
+        IconButton(tooltip: '上個月', icon: const Icon(Icons.chevron_left), onPressed: () => notifier.shift(-1)),
         GestureDetector(
           onTap: notifier.reset,
           child: Text(label, style: Theme.of(context).textTheme.titleMedium),
         ),
-        IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => notifier.shift(1)),
+        IconButton(tooltip: '下個月', icon: const Icon(Icons.chevron_right), onPressed: () => notifier.shift(1)),
       ],
     );
   }
@@ -227,19 +227,21 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).colorScheme.outline;
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: c),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(color: c),
-            textAlign: TextAlign.center,
-          ),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 48, color: c),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: TextStyle(color: c),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

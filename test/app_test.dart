@@ -29,7 +29,7 @@ void main() {
   );
 
   Future<void> settle(WidgetTester tester) async {
-    for (var i = 0; i < 10; i++) {
+    for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
   }
@@ -88,6 +88,42 @@ void main() {
     await tester.tap(find.text('分類'));
     await settle(tester);
     expect(find.text('交通'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await settle(tester);
+  });
+
+  testWidgets('記賬畫面有輸入就返回會先問', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    await db.setSetting(SettingKeys.onboarded, 'true');
+    await tester.pumpWidget(app());
+    await settle(tester);
+
+    // 冇改過：返回即走
+    await tester.tap(find.byTooltip('記一筆'));
+    await settle(tester);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.text('最近交易'), findsOneWidget);
+
+    // 輸入咗金額：要確認
+    await tester.tap(find.byTooltip('記一筆'));
+    await settle(tester);
+    await tester.tap(find.widgetWithText(FilledButton, '7').last);
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.text('唔儲存就離開？'), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await settle(tester);
+    expect(find.text('\$7.00'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    await tester.tap(find.text('離開'));
+    await settle(tester);
+    expect(find.text('最近交易'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await settle(tester);

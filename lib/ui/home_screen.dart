@@ -144,6 +144,8 @@ class HomeScreen extends ConsumerWidget {
       messenger.showSnackBar(
         SnackBar(
           content: Text('已記低「${t.name}」${formatMoney(t.amount)}'),
+          persist: false,
+          duration: const Duration(seconds: 4),
           action: SnackBarAction(label: '復原', onPressed: () => ledger.deleteEntry(id)),
         ),
       );
