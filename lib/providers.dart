@@ -94,6 +94,21 @@ final monthStartDayProvider = Provider<int>((ref) {
   return int.tryParse(v ?? '') ?? 1;
 });
 
+/// 底部導航揀咗邊頁：0 首頁、1 統計、2 預算、3 帳戶。
+class HomeTab extends Notifier<int> {
+  @override
+  int build() => 0;
+  void select(int i) => state = i;
+}
+
+final homeTabProvider = NotifierProvider<HomeTab, int>(HomeTab.new);
+
+/// 儲蓄率目標（%），預設 50。
+final savingsTargetProvider = Provider<int>((ref) {
+  final v = ref.watch(settingsProvider).value?[SettingKeys.savingsTarget];
+  return (int.tryParse(v ?? '') ?? 50).clamp(0, 90);
+});
+
 /// 交易列表同報表而家睇緊邊個月（任何喺嗰期入面嘅日子）。
 class PeriodAnchor extends Notifier<DateTime> {
   @override
@@ -173,6 +188,21 @@ final recentPeriodsProvider = StreamProvider.autoDispose.family<List<PeriodSumma
   final startDay = ref.watch(monthStartDayProvider);
   return _live(ref, (l) => l.recentPeriods(6, startDay, now: anchor));
 });
+
+/// 統計頁：最近 count 期（週 / 月 / 年）嘅收支，由舊到新。
+final unitSummariesProvider = StreamProvider.autoDispose.family<List<PeriodSummary>, (PeriodUnit, DateTime, int)>((
+  ref,
+  key,
+) {
+  final startDay = ref.watch(monthStartDayProvider);
+  final (unit, anchor, count) = key;
+  return _live(ref, (l) => l.summaries(recentRanges(unit, anchor, startDay, count)));
+});
+
+/// 某日之前（唔包嗰日）嘅淨資產，用嚟計「比上月」。
+final netWorthAtProvider = StreamProvider.autoDispose.family<int, DateTime>(
+  (ref, at) => _live(ref, (l) => l.netWorth(asOf: at)),
+);
 
 final netWorthProvider = Provider<AsyncValue<(int assets, int liabilities)>>((ref) {
   final accounts = ref.watch(accountMapProvider);

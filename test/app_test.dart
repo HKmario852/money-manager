@@ -47,7 +47,7 @@ void main() {
     await tester.tap(find.text('開始記賬'));
     await settle(tester);
     expect(find.text('最近交易'), findsOneWidget);
-    expect(find.text('\$500.00'), findsWidgets); // 淨資產
+    expect(find.text('HK\$500.00'), findsWidgets); // 淨資產
 
     // 記一筆：餐飲 › 午餐 $45.5
     await tester.tap(find.byTooltip('記一筆'));
@@ -57,32 +57,62 @@ void main() {
     await tester.tap(find.text('午餐'));
     await settle(tester);
     for (final k in ['4', '5', '.', '5']) {
-      await tester.tap(find.widgetWithText(FilledButton, k).last);
+      await tester.tap(find.byKey(ValueKey('key-$k')));
       await tester.pump();
     }
-    expect(find.text('\$45.50'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.check));
+    expect(find.text('-HK\$ 45.5'), findsOneWidget);
+    expect(find.text('餐飲 › 午餐 · 現金'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('key-done')));
     await settle(tester);
 
     expect(find.text('餐飲 › 午餐'), findsOneWidget);
-    expect(find.text('\$45.50'), findsWidgets);
+    expect(find.text('-HK\$45.50'), findsWidgets);
 
     final cash = await (db.select(db.accounts)..where((a) => a.name.equals('現金'))).getSingle();
     final rows = await (db.select(db.postings)..where((p) => p.accountId.equals(cash.id))).get();
     expect(rows.fold(0, (s, p) => s + p.amount), 50000 - 4550);
 
-    // 其他分頁可以打開
-    await tester.tap(find.text('交易'));
+    // 再記一筆：存完留喺記賬畫面，金額清零，可以直接關閉
+    await tester.tap(find.byTooltip('記一筆'));
     await settle(tester);
-    await tester.tap(find.text('報表'));
+    await tester.tap(find.text('餐飲'));
+    await settle(tester);
+    await tester.tap(find.text('午餐'));
+    await settle(tester);
+    await tester.tap(find.byKey(const ValueKey('key-3')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('key-again')));
+    await settle(tester);
+    expect(find.text('-HK\$ 0'), findsOneWidget);
+    expect(find.textContaining('已記低'), findsOneWidget);
+    await tester.tap(find.byTooltip('關閉'));
+    await settle(tester);
+    expect(find.text('唔儲存就離開？'), findsNothing);
+    final afterAgain = await (db.select(db.postings)..where((p) => p.accountId.equals(cash.id))).get();
+    expect(afterAgain.fold(0, (s, p) => s + p.amount), 50000 - 4550 - 300);
+
+    // 全部交易
+    await tester.tap(find.text('查看全部'));
+    await settle(tester);
+    expect(find.text('餐飲 › 午餐'), findsNWidgets(2));
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+
+    // 其他分頁可以打開
+    await tester.tap(find.text('統計'));
     await settle(tester);
     expect(find.text('總支出'), findsOneWidget);
-    await tester.tap(find.text('賬戶').last);
+    expect(find.text('支出趨勢'), findsOneWidget);
+    await tester.tap(find.text('預算').last);
     await settle(tester);
-    expect(find.text('\$454.50'), findsWidgets);
+    expect(find.text('未設預算'), findsOneWidget);
+    await tester.tap(find.text('帳戶').last);
+    await settle(tester);
+    expect(find.text('我的帳戶'), findsOneWidget);
+    expect(find.text('HK\$451.50'), findsWidgets);
     await tester.tap(find.text('首頁'));
     await settle(tester);
-    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.tap(find.byTooltip('設定'));
     await settle(tester);
     expect(find.text('私隱鎖'), findsOneWidget);
     await tester.tap(find.text('分類'));
@@ -111,14 +141,14 @@ void main() {
     // 輸入咗金額：要確認
     await tester.tap(find.byTooltip('記一筆'));
     await settle(tester);
-    await tester.tap(find.widgetWithText(FilledButton, '7').last);
+    await tester.tap(find.byKey(const ValueKey('key-7')));
     await tester.pump();
     await tester.binding.handlePopRoute();
     await settle(tester);
     expect(find.text('唔儲存就離開？'), findsOneWidget);
     await tester.tap(find.text('取消'));
     await settle(tester);
-    expect(find.text('\$7.00'), findsOneWidget);
+    expect(find.text('-HK\$ 7'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await settle(tester);
     await tester.tap(find.text('離開'));

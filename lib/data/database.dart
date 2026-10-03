@@ -182,6 +182,7 @@ abstract final class SettingKeys {
   static const biometricLock = 'biometric_lock';
   static const monthStartDay = 'month_start_day';
   static const onboarded = 'onboarded';
+  static const savingsTarget = 'savings_target';
 }
 
 /// 系統賬戶 id（固定，方便引擎搵返）

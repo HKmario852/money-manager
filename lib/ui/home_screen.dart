@@ -4,11 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/database.dart';
 import '../domain/money.dart';
 import '../providers.dart';
-import 'accounts_screen.dart';
 import 'budgets_screen.dart';
 import 'common.dart';
 import 'entry_screen.dart';
 import 'settings_screen.dart';
+import 'theme.dart';
 import 'transactions_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -17,12 +17,12 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final range = ref.watch(thisPeriodProvider);
+    final startDay = ref.watch(monthStartDayProvider);
     final summary = ref.watch(summaryProvider(range));
     final accounts = ref.watch(accountMapProvider);
     final templates = ref.watch(templatesProvider).value ?? const <Template>[];
     final budgets = ref.watch(budgetStatusProvider).value ?? const <BudgetStatus>[];
-    final total = budgets.where((b) => b.category == null).firstOrNull;
-    final overs = budgets.where((b) => b.category != null && b.ratio >= 0.8).toList();
+    final netWorth = ref.watch(netWorthProvider).value;
     final TxFilter recentFilter = (
       from: null,
       to: null,
@@ -34,106 +34,139 @@ class HomeScreen extends ConsumerWidget {
       limit: 10,
     );
     final recent = ref.watch(transactionsProvider(recentFilter));
-    final theme = Theme.of(context);
+    void goTab(int i) => ref.read(homeTabProvider.notifier).select(i);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('記錄課金'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            PageHeader(
+              '記錄課金',
+              overline: formatDate(DateTime.now()),
+              actions: [
+                CircleAction(
+                  tooltip: '設定',
+                  icon: Icons.settings_outlined,
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            AppCard(
+              color: AppColors.ink,
+              padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+              onTap: () => goTab(1),
               child: summary.when(
-                loading: () => const SizedBox(height: 64),
-                error: (e, _) => Text('$e'),
+                loading: () => const SizedBox(height: 110),
+                error: (e, _) => Text('$e', style: const TextStyle(color: Colors.white)),
                 data: (s) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${periodLabel(range.$1)} 支出', style: theme.textTheme.labelLarge),
-                    Text(formatMoney(s.expense), style: theme.textTheme.headlineMedium?.copyWith(color: expenseColor)),
+                    Text(
+                      '${unitLabel(PeriodUnit.month, range.$1, startDay: startDay)} 總支出',
+                      style: const TextStyle(color: Color(0xFFB9BDC4), fontWeight: FontWeight.w600),
+                    ),
                     const SizedBox(height: 8),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: BigMoney(s.expense, color: Colors.white, dimColor: const Color(0xFF8C9099)),
+                    ),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
-                        Expanded(child: Text('收入 ${formatMoney(s.income)}')),
-                        Expanded(child: Row(children: [const Text('結餘 '), AmountText(s.net)])),
+                        Expanded(child: _DarkFigure('收入', formatMoney(s.income))),
+                        Expanded(child: _DarkFigure('結餘', formatMoney(s.net, showPlus: true))),
+                        if (netWorth != null)
+                          Expanded(child: _DarkFigure('淨資產', formatMoney(netWorth.$1 - netWorth.$2))),
                       ],
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-          if (total != null || overs.isNotEmpty)
-            Card(
-              child: InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetsScreen())),
-                child: Column(children: [if (total != null) BudgetBar(total), for (final o in overs) BudgetBar(o)]),
+            if (budgets.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              SectionCard(
+                title: '預算',
+                trailing: TextButton(onPressed: () => goTab(2), child: const Text('查看')),
+                child: Column(children: [for (final b in _highlights(budgets)) BudgetBar(b, onTap: () => goTab(2))]),
               ),
-            )
-          else
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.savings_outlined),
-                title: const Text('設定每月預算'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BudgetsScreen())),
+            ] else ...[
+              const SizedBox(height: 6),
+              AppCard(
+                onTap: () => goTab(2),
+                child: const Row(
+                  children: [
+                    Icon(Icons.savings_outlined),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text('設定每月預算', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                    Icon(Icons.chevron_right),
+                  ],
+                ),
               ),
-            ),
-          const NetWorthCard(),
-          if (templates.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-              child: Text('常用（撳一下即記，長撳先改）', style: theme.textTheme.titleSmall),
-            ),
-            SizedBox(
-              height: 44,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (final t in templates)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onLongPress: () => openTemplateForEdit(context, ref, t),
-                        child: ActionChip(
-                          avatar: accounts[t.toAccountId] != null
-                              ? Icon(iconFor(accounts[t.toAccountId]!), size: 18)
-                              : null,
-                          label: Text('${t.name} ${formatMoney(t.amount)}'),
-                          onPressed: () => _useTemplate(context, ref, t),
+            ],
+            if (templates.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.fromLTRB(4, 14, 4, 8),
+                child: Text(
+                  '常用（撳一下即記，長撳先改）',
+                  style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                ),
+              ),
+              SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final t in templates)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onLongPress: () => openTemplateForEdit(context, ref, t),
+                          child: ActionChip(
+                            backgroundColor: AppColors.card,
+                            avatar: accounts[t.toAccountId] != null
+                                ? AccountAvatar(accounts[t.toAccountId]!, radius: 10)
+                                : null,
+                            label: Text('${t.name} ${formatMoney(t.amount, trimZero: true)}'),
+                            onPressed: () => _useTemplate(context, ref, t),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
+            SectionCard(
+              title: '最近交易',
+              trailing: TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransactionsScreen())),
+                child: const Text('查看全部'),
+              ),
+              child: recent.when(
+                loading: () => const SizedBox(height: 64),
+                error: (e, _) => Text('$e'),
+                data: (list) => list.isEmpty
+                    ? const EmptyState('未有交易。撳下面 + 記第一筆。', icon: Icons.edit_note)
+                    : Column(children: [for (final t in list) TxTile(t, accounts: accounts)]),
               ),
             ),
           ],
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 16, 4, 0),
-            child: Text('最近交易', style: theme.textTheme.titleSmall),
-          ),
-          recent.when(
-            loading: () => const SizedBox(height: 64),
-            error: (e, _) => Text('$e'),
-            data: (list) => list.isEmpty
-                ? const EmptyState('未有交易。撳下面 + 記第一筆。', icon: Icons.edit_note)
-                : Card(
-                    child: Column(children: [for (final t in list) TxTile(t, accounts: accounts)]),
-                  ),
-          ),
-          const SizedBox(height: 96),
-        ],
+        ),
       ),
     );
+  }
+
+  /// 首頁只顯示總預算同最緊張嘅兩個分類。
+  List<BudgetStatus> _highlights(List<BudgetStatus> all) {
+    final total = all.where((b) => b.category == null);
+    final cats = all.where((b) => b.category != null).toList()..sort((a, b) => b.ratio.compareTo(a.ratio));
+    return [...total, ...cats.take(total.isEmpty ? 3 : 2)];
   }
 
   Future<void> _useTemplate(BuildContext context, WidgetRef ref, Template t) async {
@@ -153,6 +186,32 @@ class HomeScreen extends ConsumerWidget {
       if (context.mounted) showError(context, e);
     }
   }
+}
+
+class _DarkFigure extends StatelessWidget {
+  const _DarkFigure(this.label, this.value);
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFFB9BDC4), fontSize: 12)),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// 長撳模板：改金額先記
