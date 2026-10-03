@@ -11,6 +11,7 @@ import '../providers.dart';
 import 'capture_screens.dart';
 import 'common.dart';
 import 'manage_screens.dart';
+import 'update_ui.dart';
 
 const kCurrencies = ['HKD', 'CNY', 'TWD', 'MOP', 'USD', 'JPY', 'GBP', 'EUR', 'SGD'];
 
@@ -124,6 +125,16 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('由備份還原'),
             subtitle: const Text('會覆蓋而家所有數據'),
             onTap: () => restoreFromBackup(context, ref),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.system_update_outlined),
+            title: const Text('檢查更新'),
+            subtitle: Text(switch (ref.watch(packageInfoProvider).value) {
+              final i? => '目前版本 ${i.version}（build ${i.buildNumber}）',
+              null => ' ',
+            }),
+            onTap: () => checkForUpdate(context, ref, manual: true),
           ),
         ],
       ),

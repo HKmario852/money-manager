@@ -275,6 +275,8 @@ abstract final class SettingKeys {
 
   /// Gemini 模型名
   static const geminiModel = 'gemini_model';
+  static const updateLastCheck = 'update_last_check';
+  static const updateSkippedBuild = 'update_skipped_build';
 }
 
 /// 系統賬戶 id（固定，方便引擎搵返）
