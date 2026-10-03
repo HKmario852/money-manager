@@ -69,6 +69,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             onPressed: () => setState(() => showArchived = !showArchived),
           ),
           IconButton(
+            tooltip: '新增賬戶',
             icon: const Icon(Icons.add),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountEditScreen())),
           ),
@@ -128,7 +129,7 @@ class _AccountTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                LinearProgressIndicator(value: (owed / limit).clamp(0, 1).toDouble()),
+                ExcludeSemantics(child: LinearProgressIndicator(value: (owed / limit).clamp(0, 1).toDouble())),
                 const SizedBox(height: 2),
                 Text('可用 ${formatMoney(limit - owed)} / 額度 ${formatMoney(limit)}'),
               ],
@@ -335,11 +336,11 @@ class _AccountEditScreenState extends ConsumerState<AccountEditScreen> {
               child: const Text('取消封存'),
             )
           else if (editing)
-            IconButton(icon: const Icon(Icons.delete_outline), onPressed: _archive),
+            IconButton(tooltip: '刪除或封存', icon: const Icon(Icons.delete_outline), onPressed: _archive),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 32 + MediaQuery.of(context).padding.bottom),
         children: [
           if (!editing) ...[
             Text('類型', style: Theme.of(context).textTheme.titleSmall),

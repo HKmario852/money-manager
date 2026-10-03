@@ -83,10 +83,49 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
     final id = await ref.read(databaseProvider).getSetting(_lastFundKey);
     if (!mounted) return;
     final accounts = ref.read(accountMapProvider);
+    final untouched = !_isDirty;
     setState(() {
       fundId = (id != null && accounts[id]?.isArchived == false) ? id : null;
       fundId ??= fundAccounts(accounts.values).firstOrNull?.id;
     });
+    if (untouched) _baseline = _snapshot();
+  }
+
+  /// 用嚟判斷用戶有冇改過嘢，有就喺返回時先問一句。
+  late String _baseline = _snapshot();
+
+  String _snapshot() => [
+    kind,
+    expr,
+    fundId,
+    toFundId,
+    categoryId,
+    date,
+    note.text,
+    (tagIds.toList()..sort()).join(','),
+    newPhotos.length,
+    removedAttachments.length,
+  ].join('|');
+
+  bool get _isDirty => _snapshot() != _baseline;
+
+  Future<void> _confirmLeave() async {
+    if (_isDirty && !await confirm(context, '唔儲存就離開？', message: '輸入咗嘅內容會冇咗。', ok: '離開')) return;
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  /// 喺數字鍵盤上面顯示提示，唔好遮住 ✓ 掣。
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 330),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   @override
@@ -156,7 +195,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   Future<void> _save() async {
     final missing = _missing();
     if (missing != null) {
-      showError(context, missing);
+      _toast(missing);
       return;
     }
     setState(() => saving = true);
@@ -179,7 +218,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
       await ledger.db.setSetting(_lastFundKey, fundId!);
       if (mounted) Navigator.pop(context, id);
     } catch (e) {
-      if (mounted) showError(context, e);
+      if (mounted) _toast(e.toString());
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -188,7 +227,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   Future<void> _saveAsTemplate() async {
     final missing = _missing();
     if (missing != null) {
-      showError(context, missing);
+      _toast(missing);
       return;
     }
     final accounts = ref.read(accountMapProvider);
@@ -197,7 +236,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
     if (name == null || name.trim().isEmpty) return;
     await ref.read(ledgerProvider).saveTemplate(name.trim(), _draft()!);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已存做模板「${name.trim()}」')));
+      _toast('已存做模板「${name.trim()}」');
     }
   }
 
@@ -267,129 +306,135 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
         .toList();
     final attachmentsDir = ref.watch(appPathsProvider).attachments;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: SegmentedButton<EntryKind>(
-          segments: const [
-            ButtonSegment(value: EntryKind.expense, label: Text('支出')),
-            ButtonSegment(value: EntryKind.income, label: Text('收入')),
-            ButtonSegment(value: EntryKind.transfer, label: Text('轉賬')),
-          ],
-          selected: {kind},
-          showSelectedIcon: false,
-          onSelectionChanged: (s) => setState(() {
-            if (s.first != kind) categoryId = null;
-            kind = s.first;
-          }),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'template') _saveAsTemplate();
-            },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'template', child: Text('存做模板'))],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmLeave();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: SegmentedButton<EntryKind>(
+            segments: const [
+              ButtonSegment(value: EntryKind.expense, label: Text('支出')),
+              ButtonSegment(value: EntryKind.income, label: Text('收入')),
+              ButtonSegment(value: EntryKind.transfer, label: Text('轉賬')),
+            ],
+            selected: {kind},
+            showSelectedIcon: false,
+            onSelectionChanged: (s) => setState(() {
+              if (s.first != kind) categoryId = null;
+              kind = s.first;
+            }),
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                children: [
-                  if (kind == EntryKind.transfer) ...[
-                    fundChip('由', fundId, (id) => setState(() => fundId = id)),
-                    const Center(child: Icon(Icons.arrow_downward)),
-                    fundChip('去', toFundId, (id) => setState(() => toFundId = id)),
-                  ] else
-                    _CategoryGrid(
-                      categories: topCategories(
-                        accounts,
-                        kind == EntryKind.income ? AccountType.income : AccountType.expense,
-                      ),
-                      selectedId: categoryId,
-                      selectedParentId: categoryId != null ? (byId[categoryId]?.parentId ?? categoryId) : null,
-                      onTap: (c) => _pickCategory(c, accounts),
-                    ),
-                  if (kind != EntryKind.transfer && byId[categoryId] != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text('分類：${categoryPath(byId[categoryId]!, byId)}', style: theme.textTheme.bodyMedium),
-                    ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      if (kind != EntryKind.transfer)
-                        fundChip(kind == EntryKind.income ? '存入' : '用', fundId, (id) => setState(() => fundId = id)),
-                      ActionChip(
-                        avatar: const Icon(Icons.event, size: 18),
-                        label: Text('${formatDate(date)} ${formatTime(date)}'),
-                        onPressed: _pickDate,
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.tag, size: 18),
-                        label: Text(
-                          tagIds.isEmpty
-                              ? 'Tag'
-                              : tags.where((t) => tagIds.contains(t.id)).map((t) => '#${t.name}').join(' '),
-                        ),
-                        onPressed: _pickTags,
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.photo_camera, size: 18),
-                        label: const Text('影相'),
-                        onPressed: () => _pickPhoto(ImageSource.camera),
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.photo_library, size: 18),
-                        label: const Text('相簿'),
-                        onPressed: () => _pickPhoto(ImageSource.gallery),
-                      ),
-                    ],
-                  ),
-                  if (existingAtts.isNotEmpty || newPhotos.isNotEmpty)
-                    SizedBox(
-                      height: 72,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          for (final a in existingAtts)
-                            _Thumb(
-                              File(p.join(attachmentsDir, a.filePath)),
-                              onRemove: () => setState(() => removedAttachments.add(a.id)),
-                            ),
-                          for (final path in newPhotos)
-                            _Thumb(File(path), onRemove: () => setState(() => newPhotos.remove(path))),
-                        ],
-                      ),
-                    ),
-                  TextField(
-                    controller: note,
-                    decoration: const InputDecoration(hintText: '備註', prefixIcon: Icon(Icons.notes)),
-                  ),
-                ],
-              ),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (v) {
+                if (v == 'template') _saveAsTemplate();
+              },
+              itemBuilder: (_) => const [PopupMenuItem(value: 'template', child: Text('存做模板'))],
             ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: kindColor.withValues(alpha: 0.08),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (RegExp(r'\d[+-]').hasMatch(expr)) Text(expr, style: theme.textTheme.bodySmall),
-                  Text(
-                    formatMoney(amount ?? 0),
-                    style: theme.textTheme.headlineMedium?.copyWith(color: kindColor, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-            _Keypad(onKey: _key, onDone: saving ? null : _save, doneColor: kindColor),
           ],
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  children: [
+                    if (kind == EntryKind.transfer) ...[
+                      fundChip('由', fundId, (id) => setState(() => fundId = id)),
+                      const Center(child: Icon(Icons.arrow_downward)),
+                      fundChip('去', toFundId, (id) => setState(() => toFundId = id)),
+                    ] else
+                      _CategoryGrid(
+                        categories: topCategories(
+                          accounts,
+                          kind == EntryKind.income ? AccountType.income : AccountType.expense,
+                        ),
+                        selectedId: categoryId,
+                        selectedParentId: categoryId != null ? (byId[categoryId]?.parentId ?? categoryId) : null,
+                        onTap: (c) => _pickCategory(c, accounts),
+                      ),
+                    if (kind != EntryKind.transfer && byId[categoryId] != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('分類：${categoryPath(byId[categoryId]!, byId)}', style: theme.textTheme.bodyMedium),
+                      ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        if (kind != EntryKind.transfer)
+                          fundChip(kind == EntryKind.income ? '存入' : '用', fundId, (id) => setState(() => fundId = id)),
+                        ActionChip(
+                          avatar: const Icon(Icons.event, size: 18),
+                          label: Text('${formatDate(date)} ${formatTime(date)}'),
+                          onPressed: _pickDate,
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.tag, size: 18),
+                          label: Text(
+                            tagIds.isEmpty
+                                ? 'Tag'
+                                : tags.where((t) => tagIds.contains(t.id)).map((t) => '#${t.name}').join(' '),
+                          ),
+                          onPressed: _pickTags,
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.photo_camera, size: 18),
+                          label: const Text('影相'),
+                          onPressed: () => _pickPhoto(ImageSource.camera),
+                        ),
+                        ActionChip(
+                          avatar: const Icon(Icons.photo_library, size: 18),
+                          label: const Text('相簿'),
+                          onPressed: () => _pickPhoto(ImageSource.gallery),
+                        ),
+                      ],
+                    ),
+                    if (existingAtts.isNotEmpty || newPhotos.isNotEmpty)
+                      SizedBox(
+                        height: 72,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            for (final a in existingAtts)
+                              _Thumb(
+                                File(p.join(attachmentsDir, a.filePath)),
+                                onRemove: () => setState(() => removedAttachments.add(a.id)),
+                              ),
+                            for (final path in newPhotos)
+                              _Thumb(File(path), onRemove: () => setState(() => newPhotos.remove(path))),
+                          ],
+                        ),
+                      ),
+                    TextField(
+                      controller: note,
+                      decoration: const InputDecoration(hintText: '備註', prefixIcon: Icon(Icons.notes)),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: kindColor.withValues(alpha: 0.08),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (RegExp(r'\d[+-]').hasMatch(expr)) Text(expr, style: theme.textTheme.bodySmall),
+                    Text(
+                      formatMoney(amount ?? 0),
+                      style: theme.textTheme.headlineMedium?.copyWith(color: kindColor, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              _Keypad(onKey: _key, onDone: saving ? null : _save, doneColor: kindColor),
+            ],
+          ),
         ),
       ),
     );
@@ -411,11 +456,10 @@ class _CategoryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 5,
+    return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 0.85,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 80, mainAxisExtent: 72),
       children: [
         for (final c in categories)
           InkWell(
