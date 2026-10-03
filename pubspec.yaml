@@ -46,6 +46,8 @@ dependencies:
   archive: ^4.3.0
   uuid: ^4.6.0
   intl: ^0.20.3
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

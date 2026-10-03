@@ -55,5 +55,4 @@ String minorToInput(int minor) {
 }
 
 /// 期間嘅顯示名，以起始月份命名，例如 "2026年10月"
-String periodLabel(DateTime periodStart) =>
-    '${periodStart.year}年${periodStart.month}月';
+String periodLabel(DateTime periodStart) => '${periodStart.year}年${periodStart.month}月';
