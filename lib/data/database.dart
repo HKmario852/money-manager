@@ -53,11 +53,9 @@ class JournalEntries extends Table with Timestamps {
   DateTimeColumn get occurredAt => dateTime()();
   TextColumn get note => text().nullable()();
   TextColumn get merchant => text().nullable()();
-  TextColumn get source =>
-      textEnum<EntrySource>().withDefault(const Constant('manual'))();
+  TextColumn get source => textEnum<EntrySource>().withDefault(const Constant('manual'))();
   TextColumn get externalId => text().nullable()();
-  TextColumn get status =>
-      textEnum<EntryStatus>().withDefault(const Constant('posted'))();
+  TextColumn get status => textEnum<EntryStatus>().withDefault(const Constant('posted'))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -67,8 +65,7 @@ class JournalEntries extends Table with Timestamps {
 @TableIndex(name: 'idx_postings_entry', columns: {#entryId})
 class Postings extends Table {
   TextColumn get id => text().clientDefault(newId)();
-  TextColumn get entryId =>
-      text().references(JournalEntries, #id, onDelete: KeyAction.cascade)();
+  TextColumn get entryId => text().references(JournalEntries, #id, onDelete: KeyAction.cascade)();
   TextColumn get accountId => text().references(Accounts, #id)();
 
   /// 帶正負號，最小貨幣單位（仙）。正數 = 借方，負數 = 貸方。
@@ -90,10 +87,8 @@ class Tags extends Table with Timestamps {
 }
 
 class EntryTags extends Table {
-  TextColumn get entryId =>
-      text().references(JournalEntries, #id, onDelete: KeyAction.cascade)();
-  TextColumn get tagId =>
-      text().references(Tags, #id, onDelete: KeyAction.cascade)();
+  TextColumn get entryId => text().references(JournalEntries, #id, onDelete: KeyAction.cascade)();
+  TextColumn get tagId => text().references(Tags, #id, onDelete: KeyAction.cascade)();
 
   @override
   Set<Column> get primaryKey => {entryId, tagId};
@@ -101,8 +96,7 @@ class EntryTags extends Table {
 
 class Attachments extends Table {
   TextColumn get id => text().clientDefault(newId)();
-  TextColumn get entryId =>
-      text().references(JournalEntries, #id, onDelete: KeyAction.cascade)();
+  TextColumn get entryId => text().references(JournalEntries, #id, onDelete: KeyAction.cascade)();
 
   /// 相對於 App 附件文件夾嘅路徑。
   TextColumn get filePath => text()();
@@ -118,8 +112,7 @@ class Budgets extends Table with Timestamps {
 
   /// null = 全月總預算；否則係一個 expense 主分類。
   TextColumn get accountId => text().nullable().references(Accounts, #id)();
-  TextColumn get period =>
-      textEnum<BudgetPeriod>().withDefault(const Constant('monthly'))();
+  TextColumn get period => textEnum<BudgetPeriod>().withDefault(const Constant('monthly'))();
   IntColumn get amount => integer()();
 
   /// 'YYYY-MM'
@@ -156,19 +149,7 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(
-  tables: [
-    Accounts,
-    JournalEntries,
-    Postings,
-    Tags,
-    EntryTags,
-    Attachments,
-    Budgets,
-    Templates,
-    Settings,
-  ],
-)
+@DriftDatabase(tables: [Accounts, JournalEntries, Postings, Tags, EntryTags, Attachments, Budgets, Templates, Settings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
@@ -187,15 +168,12 @@ class AppDatabase extends _$AppDatabase {
   );
 
   Future<String?> getSetting(String key) async {
-    final row = await (select(
-      settings,
-    )..where((s) => s.key.equals(key))).getSingleOrNull();
+    final row = await (select(settings)..where((s) => s.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
-  Future<void> setSetting(String key, String value) => into(
-    settings,
-  ).insertOnConflictUpdate(SettingsCompanion.insert(key: key, value: value));
+  Future<void> setSetting(String key, String value) =>
+      into(settings).insertOnConflictUpdate(SettingsCompanion.insert(key: key, value: value));
 }
 
 /// 設定鍵

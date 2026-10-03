@@ -62,9 +62,7 @@ class TxView {
   int get amount => postings.where((p) => p.amount > 0).fold(0, (s, p) => s + p.amount);
 
   /// 呢筆交易對某個資金賬戶嘅影響（帶正負號）。
-  int effectOn(String accountId) => postings
-      .where((p) => p.accountId == accountId)
-      .fold(0, (s, p) => s + p.amount);
+  int effectOn(String accountId) => postings.where((p) => p.accountId == accountId).fold(0, (s, p) => s + p.amount);
 
   Account get category => entry.kind == EntryKind.income ? from : to;
   Account get fund => entry.kind == EntryKind.income ? to : from;
@@ -85,11 +83,7 @@ class Ledger {
 
   // ---------------------------------------------------------------- 寫入
 
-  Future<String> saveEntry(
-    EntryDraft d, {
-    String? entryId,
-    EntrySource source = EntrySource.manual,
-  }) async {
+  Future<String> saveEntry(EntryDraft d, {String? entryId, EntrySource source = EntrySource.manual}) async {
     if (d.amount <= 0) throw LedgerException('金額要大過 0');
     if (d.fromAccountId == d.toAccountId) throw LedgerException('兩個賬戶唔可以一樣');
     final from = await _account(d.fromAccountId);
@@ -100,16 +94,18 @@ class Ledger {
       final id = entryId ?? newId();
       final now = DateTime.now();
       if (entryId == null) {
-        await db.into(db.journalEntries).insert(
-          JournalEntriesCompanion.insert(
-            id: Value(id),
-            kind: d.kind,
-            occurredAt: d.occurredAt,
-            note: Value(_blankToNull(d.note)),
-            merchant: Value(_blankToNull(d.merchant)),
-            source: Value(source),
-          ),
-        );
+        await db
+            .into(db.journalEntries)
+            .insert(
+              JournalEntriesCompanion.insert(
+                id: Value(id),
+                kind: d.kind,
+                occurredAt: d.occurredAt,
+                note: Value(_blankToNull(d.note)),
+                merchant: Value(_blankToNull(d.merchant)),
+                source: Value(source),
+              ),
+            );
       } else {
         await (db.update(db.journalEntries)..where((e) => e.id.equals(id))).write(
           JournalEntriesCompanion(
@@ -140,14 +136,16 @@ class Ledger {
   }) {
     return db.transaction(() async {
       final id = newId();
-      await db.into(db.journalEntries).insert(
-        JournalEntriesCompanion.insert(
-          id: Value(id),
-          kind: kind,
-          occurredAt: occurredAt ?? DateTime.now(),
-          note: Value(note),
-        ),
-      );
+      await db
+          .into(db.journalEntries)
+          .insert(
+            JournalEntriesCompanion.insert(
+              id: Value(id),
+              kind: kind,
+              occurredAt: occurredAt ?? DateTime.now(),
+              note: Value(note),
+            ),
+          );
       await _insertPostings(id, lines);
       return id;
     });
@@ -158,14 +156,11 @@ class Ledger {
     final sum = lines.fold(0, (s, l) => s + l.$2);
     if (sum != 0) throw LedgerException('借貸唔平衡（差 $sum）');
     for (final (accountId, amount) in lines) {
-      await db.into(db.postings).insert(
-        PostingsCompanion.insert(
-          entryId: entryId,
-          accountId: accountId,
-          amount: amount,
-          baseAmount: Value(amount),
-        ),
-      );
+      await db
+          .into(db.postings)
+          .insert(
+            PostingsCompanion.insert(entryId: entryId, accountId: accountId, amount: amount, baseAmount: Value(amount)),
+          );
     }
   }
 
@@ -185,13 +180,11 @@ class Ledger {
     );
   }
 
-  Future<void> addAttachment(String entryId, String relativePath, {String? mimeType}) =>
-      db.into(db.attachments).insert(
-        AttachmentsCompanion.insert(entryId: entryId, filePath: relativePath, mimeType: Value(mimeType)),
-      );
+  Future<void> addAttachment(String entryId, String relativePath, {String? mimeType}) => db
+      .into(db.attachments)
+      .insert(AttachmentsCompanion.insert(entryId: entryId, filePath: relativePath, mimeType: Value(mimeType)));
 
-  Future<void> removeAttachment(String id) =>
-      (db.delete(db.attachments)..where((a) => a.id.equals(id))).go();
+  Future<void> removeAttachment(String id) => (db.delete(db.attachments)..where((a) => a.id.equals(id))).go();
 
   /// 新增資金賬戶。[openingBalance] 用「顯示值」：資產係結餘，負債係欠款（正數）。
   Future<String> createFundAccount({
@@ -207,25 +200,23 @@ class Ledger {
     return db.transaction(() async {
       final id = newId();
       final order = await _nextOrder(type, null);
-      await db.into(db.accounts).insert(
-        AccountsCompanion.insert(
-          id: Value(id),
-          name: name,
-          type: type,
-          subtype: Value(subtype),
-          icon: Value(icon),
-          color: Value(color),
-          creditLimit: Value(creditLimit),
-          sortOrder: Value(order),
-        ),
-      );
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              id: Value(id),
+              name: name,
+              type: type,
+              subtype: Value(subtype),
+              icon: Value(icon),
+              color: Value(color),
+              creditLimit: Value(creditLimit),
+              sortOrder: Value(order),
+            ),
+          );
       if (openingBalance != 0) {
         final signed = toSigned(type, openingBalance);
-        await postLines(
-          EntryKind.opening,
-          [(id, signed), (SystemAccounts.openingBalance, -signed)],
-          note: '期初結餘',
-        );
+        await postLines(EntryKind.opening, [(id, signed), (SystemAccounts.openingBalance, -signed)], note: '期初結餘');
       }
       return id;
     });
@@ -247,34 +238,36 @@ class Ledger {
       if (parent.type != type) throw LedgerException('子分類類型要同主分類一樣');
     }
     final id = newId();
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(
-        id: Value(id),
-        name: name,
-        type: type,
-        parentId: Value(parentId),
-        icon: Value(icon),
-        color: Value(color),
-        sortOrder: Value(await _nextOrder(type, parentId)),
-      ),
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: Value(id),
+            name: name,
+            type: type,
+            parentId: Value(parentId),
+            icon: Value(icon),
+            color: Value(color),
+            sortOrder: Value(await _nextOrder(type, parentId)),
+          ),
+        );
     return id;
   }
 
   Future<void> updateAccount(String id, AccountsCompanion changes) =>
-      (db.update(db.accounts)..where((a) => a.id.equals(id)))
-          .write(changes.copyWith(updatedAt: Value(DateTime.now())));
+      (db.update(db.accounts)..where((a) => a.id.equals(id))).write(changes.copyWith(updatedAt: Value(DateTime.now())));
 
   /// 有交易嘅賬戶只可以封存；冇交易就真係刪除。返回 true = 已刪除。
   Future<bool> archiveOrDelete(String id) async {
-    final used = await (db.select(db.postings)
-          ..where((p) => p.accountId.equals(id))
-          ..limit(1))
-        .get();
+    final used =
+        await (db.select(db.postings)
+              ..where((p) => p.accountId.equals(id))
+              ..limit(1))
+            .get();
     final children = await (db.select(db.accounts)..where((a) => a.parentId.equals(id))).get();
-    final usedByTemplate = await (db.select(db.templates)
-          ..where((t) => t.fromAccountId.equals(id) | t.toAccountId.equals(id)))
-        .get();
+    final usedByTemplate = await (db.select(
+      db.templates,
+    )..where((t) => t.fromAccountId.equals(id) | t.toAccountId.equals(id))).get();
     if (used.isEmpty && children.isEmpty && usedByTemplate.isEmpty) {
       await (db.delete(db.budgets)..where((b) => b.accountId.equals(id))).go();
       await (db.delete(db.accounts)..where((a) => a.id.equals(id))).go();
@@ -293,11 +286,7 @@ class Ledger {
     final current = (await balances())[accountId] ?? 0;
     final diff = toSigned(account.type, targetDisplay) - current;
     if (diff == 0) return;
-    await postLines(
-      EntryKind.adjustment,
-      [(accountId, diff), (SystemAccounts.adjustment, -diff)],
-      note: '結餘調整',
-    );
+    await postLines(EntryKind.adjustment, [(accountId, diff), (SystemAccounts.adjustment, -diff)], note: '結餘調整');
   }
 
   Future<void> reorder(List<String> ids) => db.transaction(() async {
@@ -314,8 +303,9 @@ class Ledger {
     final existing = await (db.select(db.tags)..where((t) => t.name.equals(clean))).getSingleOrNull();
     if (existing != null) {
       if (existing.deletedAt != null) {
-        await (db.update(db.tags)..where((t) => t.id.equals(existing.id)))
-            .write(const TagsCompanion(deletedAt: Value(null)));
+        await (db.update(
+          db.tags,
+        )..where((t) => t.id.equals(existing.id))).write(const TagsCompanion(deletedAt: Value(null)));
       }
       return existing.id;
     }
@@ -331,8 +321,9 @@ class Ledger {
       await mergeTags(from: id, into: existing.id);
       return;
     }
-    await (db.update(db.tags)..where((t) => t.id.equals(id)))
-        .write(TagsCompanion(name: Value(clean), updatedAt: Value(DateTime.now())));
+    await (db.update(
+      db.tags,
+    )..where((t) => t.id.equals(id))).write(TagsCompanion(name: Value(clean), updatedAt: Value(DateTime.now())));
   }
 
   Future<void> mergeTags({required String from, required String into}) => db.transaction(() async {
@@ -376,27 +367,24 @@ class Ledger {
     tagIds: (jsonDecode(t.tagIds) as List).cast<String>(),
   );
 
-  Future<String> useTemplate(Template t) =>
-      saveEntry(draftFromTemplate(t), source: EntrySource.template);
+  Future<String> useTemplate(Template t) => saveEntry(draftFromTemplate(t), source: EntrySource.template);
 
-  Future<void> deleteTemplate(String id) =>
-      (db.delete(db.templates)..where((t) => t.id.equals(id))).go();
+  Future<void> deleteTemplate(String id) => (db.delete(db.templates)..where((t) => t.id.equals(id))).go();
 
   // ---------------------------------------------------------------- 預算
 
   Future<void> saveBudget({String? id, String? categoryId, required int amount}) async {
     if (amount <= 0) throw LedgerException('預算要大過 0');
     if (id == null) {
-      final existing = await (db.select(db.budgets)
-            ..where((b) => categoryId == null ? b.accountId.isNull() : b.accountId.equals(categoryId))
-            ..where((b) => b.deletedAt.isNull()))
-          .getSingleOrNull();
+      final existing =
+          await (db.select(db.budgets)
+                ..where((b) => categoryId == null ? b.accountId.isNull() : b.accountId.equals(categoryId))
+                ..where((b) => b.deletedAt.isNull()))
+              .getSingleOrNull();
       id = existing?.id;
     }
     if (id == null) {
-      await db.into(db.budgets).insert(
-        BudgetsCompanion.insert(accountId: Value(categoryId), amount: amount),
-      );
+      await db.into(db.budgets).insert(BudgetsCompanion.insert(accountId: Value(categoryId), amount: amount));
     } else {
       await (db.update(db.budgets)..where((b) => b.id.equals(id!))).write(
         BudgetsCompanion(amount: Value(amount), updatedAt: Value(DateTime.now())),
@@ -409,23 +397,19 @@ class Ledger {
   // ---------------------------------------------------------------- 查詢
 
   /// 每個賬戶嘅帶號結餘（只計已確認、未刪除嘅分錄）。
-  Future<Map<String, int>> balances({DateTime? asOf}) =>
-      _sumByAccount(before: asOf);
+  Future<Map<String, int>> balances({DateTime? asOf}) => _sumByAccount(before: asOf);
 
-  Future<Map<String, int>> _sumByAccount({
-    DateTime? from,
-    DateTime? before,
-    List<AccountType>? types,
-  }) async {
+  Future<Map<String, int>> _sumByAccount({DateTime? from, DateTime? before, List<AccountType>? types}) async {
     final p = db.postings, e = db.journalEntries, a = db.accounts;
     final total = p.amount.sum();
-    final q = db.selectOnly(p).join([
-      innerJoin(e, e.id.equalsExp(p.entryId), useColumns: false),
-      innerJoin(a, a.id.equalsExp(p.accountId), useColumns: false),
-    ])
-      ..addColumns([p.accountId, total])
-      ..where(e.deletedAt.isNull() & e.status.equalsValue(EntryStatus.posted))
-      ..groupBy([p.accountId]);
+    final q =
+        db.selectOnly(p).join([
+            innerJoin(e, e.id.equalsExp(p.entryId), useColumns: false),
+            innerJoin(a, a.id.equalsExp(p.accountId), useColumns: false),
+          ])
+          ..addColumns([p.accountId, total])
+          ..where(e.deletedAt.isNull() & e.status.equalsValue(EntryStatus.posted))
+          ..groupBy([p.accountId]);
     if (from != null) q.where(e.occurredAt.isBiggerOrEqualValue(from));
     if (before != null) q.where(e.occurredAt.isSmallerThanValue(before));
     if (types != null) q.where(a.type.isIn(types.map((t) => t.name)));
@@ -436,17 +420,12 @@ class Ledger {
   Future<int> netWorth() async {
     final accounts = await db.select(db.accounts).get();
     final bal = await balances();
-    return accounts
-        .where((a) => isFund(a.type))
-        .fold<int>(0, (s, a) => s + (bal[a.id] ?? 0));
+    return accounts.where((a) => isFund(a.type)).fold<int>(0, (s, a) => s + (bal[a.id] ?? 0));
   }
 
   /// 期間內每個收入/支出分類嘅帶號合計（支出正數，收入負數）。
-  Future<Map<String, int>> categoryTotals(DateTime from, DateTime to) => _sumByAccount(
-    from: from,
-    before: to,
-    types: const [AccountType.expense, AccountType.income],
-  );
+  Future<Map<String, int>> categoryTotals(DateTime from, DateTime to) =>
+      _sumByAccount(from: from, before: to, types: const [AccountType.expense, AccountType.income]);
 
   Future<PeriodSummary> summary(DateTime from, DateTime to) async {
     final accounts = {for (final a in await db.select(db.accounts).get()) a.id: a};
@@ -505,14 +484,14 @@ class Ledger {
           ...accounts.values.where((a) => a.parentId == categoryId).map((a) => a.id),
         ],
       };
-      q.where((e) => existsQuery(
-        db.select(db.postings)..where((p) => p.entryId.equalsExp(e.id) & p.accountId.isIn(ids)),
-      ));
+      q.where(
+        (e) => existsQuery(db.select(db.postings)..where((p) => p.entryId.equalsExp(e.id) & p.accountId.isIn(ids))),
+      );
     }
     if (tagId != null) {
-      q.where((e) => existsQuery(
-        db.select(db.entryTags)..where((t) => t.entryId.equalsExp(e.id) & t.tagId.equals(tagId)),
-      ));
+      q.where(
+        (e) => existsQuery(db.select(db.entryTags)..where((t) => t.entryId.equalsExp(e.id) & t.tagId.equals(tagId))),
+      );
     }
     if (limit != null) q.limit(limit);
     final entries = await q.get();
@@ -547,8 +526,7 @@ class Ledger {
     ];
   }
 
-  Future<TxView?> transaction(String id) async =>
-      (await transactions(entryIds: [id])).firstOrNull;
+  Future<TxView?> transaction(String id) async => (await transactions(entryIds: [id])).firstOrNull;
 
   // ---------------------------------------------------------------- helpers
 
@@ -559,10 +537,11 @@ class Ledger {
   }
 
   Future<int> _nextOrder(AccountType type, String? parentId) async {
-    final rows = await (db.select(db.accounts)
-          ..where((a) => a.type.equalsValue(type))
-          ..where((a) => parentId == null ? a.parentId.isNull() : a.parentId.equals(parentId)))
-        .get();
+    final rows =
+        await (db.select(db.accounts)
+              ..where((a) => a.type.equalsValue(type))
+              ..where((a) => parentId == null ? a.parentId.isNull() : a.parentId.equals(parentId)))
+            .get();
     return rows.length;
   }
 
@@ -571,9 +550,7 @@ class Ledger {
 
 /// 顯示值 -> 帶號值。負債同收入嘅正常結餘係貸方（負數）。
 int toSigned(AccountType type, int display) =>
-    type == AccountType.liability || type == AccountType.income || type == AccountType.equity
-        ? -display
-        : display;
+    type == AccountType.liability || type == AccountType.income || type == AccountType.equity ? -display : display;
 
 /// 帶號值 -> 顯示值。
 int toDisplay(AccountType type, int signed) => toSigned(type, signed);

@@ -5,50 +5,19 @@ import 'database.dart';
 typedef _Cat = (String name, String icon, int color, List<(String, String)> children);
 
 const _expense = <_Cat>[
-  ('餐飲', 'restaurant', 0xFFEF6C00, [
-    ('早餐', 'breakfast'),
-    ('午餐', 'lunch'),
-    ('晚餐', 'dinner'),
-    ('外賣', 'delivery'),
-    ('飲品', 'drink'),
-    ('零食', 'snack'),
-  ]),
-  ('交通', 'transport', 0xFF1E88E5, [
-    ('港鐵', 'train'),
-    ('巴士', 'bus'),
-    ('的士', 'taxi'),
-    ('加油', 'fuel'),
-    ('泊車', 'parking'),
-  ]),
-  ('購物', 'shopping', 0xFFD81B60, [
-    ('日用品', 'basket'),
-    ('衫褲鞋襪', 'clothes'),
-    ('電子產品', 'devices'),
-  ]),
-  ('住屋', 'home', 0xFF6D4C41, [
-    ('租金', 'home'),
-    ('管理費', 'building'),
-    ('水電煤', 'bolt'),
-    ('上網', 'wifi'),
-  ]),
-  ('娛樂', 'game', 0xFF8E24AA, [
-    ('電影', 'movie'),
-    ('遊戲', 'game'),
-    ('課金', 'diamond'),
-    ('訂閱', 'subscription'),
-  ]),
-  ('醫療', 'medical', 0xFFE53935, [
-    ('睇醫生', 'medical'),
-    ('藥物', 'pill'),
-  ]),
-  ('學習', 'school', 0xFF3949AB, [
-    ('書', 'book'),
-    ('課程', 'school'),
-  ]),
-  ('社交', 'people', 0xFF00897B, [
-    ('送禮', 'gift'),
-    ('請食飯', 'restaurant'),
-  ]),
+  (
+    '餐飲',
+    'restaurant',
+    0xFFEF6C00,
+    [('早餐', 'breakfast'), ('午餐', 'lunch'), ('晚餐', 'dinner'), ('外賣', 'delivery'), ('飲品', 'drink'), ('零食', 'snack')],
+  ),
+  ('交通', 'transport', 0xFF1E88E5, [('港鐵', 'train'), ('巴士', 'bus'), ('的士', 'taxi'), ('加油', 'fuel'), ('泊車', 'parking')]),
+  ('購物', 'shopping', 0xFFD81B60, [('日用品', 'basket'), ('衫褲鞋襪', 'clothes'), ('電子產品', 'devices')]),
+  ('住屋', 'home', 0xFF6D4C41, [('租金', 'home'), ('管理費', 'building'), ('水電煤', 'bolt'), ('上網', 'wifi')]),
+  ('娛樂', 'game', 0xFF8E24AA, [('電影', 'movie'), ('遊戲', 'game'), ('課金', 'diamond'), ('訂閱', 'subscription')]),
+  ('醫療', 'medical', 0xFFE53935, [('睇醫生', 'medical'), ('藥物', 'pill')]),
+  ('學習', 'school', 0xFF3949AB, [('書', 'book'), ('課程', 'school')]),
+  ('社交', 'people', 0xFF00897B, [('送禮', 'gift'), ('請食飯', 'restaurant')]),
   ('其他', 'more', 0xFF757575, []),
 ];
 
@@ -77,10 +46,7 @@ Future<void> seedDefaults(AppDatabase db) async {
         isSystem: const Value(true),
       ),
     ]);
-    for (final (type, cats) in [
-      (AccountType.expense, _expense),
-      (AccountType.income, _income),
-    ]) {
+    for (final (type, cats) in [(AccountType.expense, _expense), (AccountType.income, _income)]) {
       var order = 0;
       for (final (name, icon, color, children) in cats) {
         final parentId = newId();

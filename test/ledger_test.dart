@@ -11,9 +11,7 @@ void main() {
   late String cash, bank, card, food, salary, lunch;
 
   Future<String> categoryNamed(String name, AccountType type) async {
-    final a = await (db.select(db.accounts)
-          ..where((a) => a.name.equals(name) & a.type.equalsValue(type)))
-        .getSingle();
+    final a = await (db.select(db.accounts)..where((a) => a.name.equals(name) & a.type.equalsValue(type))).getSingle();
     return a.id;
   }
 
@@ -68,27 +66,22 @@ void main() {
 
   test('支出、收入、轉賬寫成平衡分錄', () async {
     final now = DateTime(2026, 10, 3, 12);
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 4500,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: now,
-    ));
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 30000,
-      fromAccountId: card, toAccountId: food, occurredAt: now,
-    ));
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.income, amount: 2000000,
-      fromAccountId: salary, toAccountId: bank, occurredAt: now,
-    ));
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.transfer, amount: 50000,
-      fromAccountId: bank, toAccountId: cash, occurredAt: now,
-    ));
+    await ledger.saveEntry(
+      EntryDraft(kind: EntryKind.expense, amount: 4500, fromAccountId: cash, toAccountId: lunch, occurredAt: now),
+    );
+    await ledger.saveEntry(
+      EntryDraft(kind: EntryKind.expense, amount: 30000, fromAccountId: card, toAccountId: food, occurredAt: now),
+    );
+    await ledger.saveEntry(
+      EntryDraft(kind: EntryKind.income, amount: 2000000, fromAccountId: salary, toAccountId: bank, occurredAt: now),
+    );
+    await ledger.saveEntry(
+      EntryDraft(kind: EntryKind.transfer, amount: 50000, fromAccountId: bank, toAccountId: cash, occurredAt: now),
+    );
     // 用銀行找卡數
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.transfer, amount: 50000,
-      fromAccountId: bank, toAccountId: card, occurredAt: now,
-    ));
+    await ledger.saveEntry(
+      EntryDraft(kind: EntryKind.transfer, amount: 50000, fromAccountId: bank, toAccountId: card, occurredAt: now),
+    );
 
     final bal = await ledger.balances();
     expect(bal[cash], 100000 - 4500 + 50000);
@@ -108,51 +101,52 @@ void main() {
   test('拒絕類型唔夾嘅交易', () async {
     final now = DateTime.now();
     expect(
-      () => ledger.saveEntry(EntryDraft(
-        kind: EntryKind.expense, amount: 100,
-        fromAccountId: salary, toAccountId: food, occurredAt: now,
-      )),
+      () => ledger.saveEntry(
+        EntryDraft(kind: EntryKind.expense, amount: 100, fromAccountId: salary, toAccountId: food, occurredAt: now),
+      ),
       throwsA(isA<LedgerException>()),
     );
     expect(
-      () => ledger.saveEntry(EntryDraft(
-        kind: EntryKind.transfer, amount: 100,
-        fromAccountId: cash, toAccountId: food, occurredAt: now,
-      )),
+      () => ledger.saveEntry(
+        EntryDraft(kind: EntryKind.transfer, amount: 100, fromAccountId: cash, toAccountId: food, occurredAt: now),
+      ),
       throwsA(isA<LedgerException>()),
     );
     expect(
-      () => ledger.saveEntry(EntryDraft(
-        kind: EntryKind.expense, amount: 0,
-        fromAccountId: cash, toAccountId: food, occurredAt: now,
-      )),
+      () => ledger.saveEntry(
+        EntryDraft(kind: EntryKind.expense, amount: 0, fromAccountId: cash, toAccountId: food, occurredAt: now),
+      ),
       throwsA(isA<LedgerException>()),
     );
   });
 
   test('唔平衡嘅分錄寫唔入', () async {
-    expect(
-      () => ledger.postLines(EntryKind.adjustment, [(cash, 100), (bank, -99)]),
-      throwsA(isA<LedgerException>()),
-    );
-    expect(
-      () => ledger.postLines(EntryKind.adjustment, [(cash, 0)]),
-      throwsA(isA<LedgerException>()),
-    );
+    expect(() => ledger.postLines(EntryKind.adjustment, [(cash, 100), (bank, -99)]), throwsA(isA<LedgerException>()));
+    expect(() => ledger.postLines(EntryKind.adjustment, [(cash, 0)]), throwsA(isA<LedgerException>()));
     expect(await db.journalEntries.count().getSingle(), 3); // 只有三筆期初
   });
 
   test('編輯同刪除交易', () async {
     final now = DateTime(2026, 10, 3);
     final tag = await ledger.createTag('#去旅行');
-    final id = await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 1000,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: now, tagIds: [tag],
-    ));
+    final id = await ledger.saveEntry(
+      EntryDraft(
+        kind: EntryKind.expense,
+        amount: 1000,
+        fromAccountId: cash,
+        toAccountId: lunch,
+        occurredAt: now,
+        tagIds: [tag],
+      ),
+    );
     await ledger.saveEntry(
       EntryDraft(
-        kind: EntryKind.expense, amount: 2500,
-        fromAccountId: bank, toAccountId: lunch, occurredAt: now, note: '改咗',
+        kind: EntryKind.expense,
+        amount: 2500,
+        fromAccountId: bank,
+        toAccountId: lunch,
+        occurredAt: now,
+        note: '改咗',
       ),
       entryId: id,
     );
@@ -174,14 +168,19 @@ void main() {
   test('交易篩選：主分類包埋子分類、Tag、賬戶', () async {
     final now = DateTime(2026, 10, 3);
     final trip = await ledger.createTag('去旅行');
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 1000,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: now, tagIds: [trip],
-    ));
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 2000,
-      fromAccountId: bank, toAccountId: food, occurredAt: now,
-    ));
+    await ledger.saveEntry(
+      EntryDraft(
+        kind: EntryKind.expense,
+        amount: 1000,
+        fromAccountId: cash,
+        toAccountId: lunch,
+        occurredAt: now,
+        tagIds: [trip],
+      ),
+    );
+    await ledger.saveEntry(
+      EntryDraft(kind: EntryKind.expense, amount: 2000, fromAccountId: bank, toAccountId: food, occurredAt: now),
+    );
     expect(await ledger.transactions(categoryId: food), hasLength(2));
     expect(await ledger.transactions(tagId: trip), hasLength(1));
     expect(await ledger.transactions(accountId: bank), hasLength(1));
@@ -199,9 +198,7 @@ void main() {
   });
 
   test('有交易嘅賬戶只會封存', () async {
-    final empty = await ledger.createFundAccount(
-      name: '八達通', type: AccountType.asset, subtype: AccountSubtype.ewallet,
-    );
+    final empty = await ledger.createFundAccount(name: '八達通', type: AccountType.asset, subtype: AccountSubtype.ewallet);
     expect(await ledger.archiveOrDelete(empty), isTrue);
     expect(await ledger.archiveOrDelete(cash), isFalse);
     final c = await (db.select(db.accounts)..where((a) => a.id.equals(cash))).getSingle();
@@ -218,10 +215,16 @@ void main() {
   });
 
   test('模板一撳記賬', () async {
-    await ledger.saveTemplate('午餐', EntryDraft(
-      kind: EntryKind.expense, amount: 6000,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: DateTime.now(),
-    ));
+    await ledger.saveTemplate(
+      '午餐',
+      EntryDraft(
+        kind: EntryKind.expense,
+        amount: 6000,
+        fromAccountId: cash,
+        toAccountId: lunch,
+        occurredAt: DateTime.now(),
+      ),
+    );
     final t = await db.select(db.templates).getSingle();
     await ledger.useTemplate(t);
     expect((await ledger.balances())[cash], 100000 - 6000);
@@ -230,24 +233,40 @@ void main() {
   test('Tag 改名撞名會合併', () async {
     final a = await ledger.createTag('旅行');
     final b = await ledger.createTag('去旅行');
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 100,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: DateTime.now(), tagIds: [a],
-    ));
+    await ledger.saveEntry(
+      EntryDraft(
+        kind: EntryKind.expense,
+        amount: 100,
+        fromAccountId: cash,
+        toAccountId: lunch,
+        occurredAt: DateTime.now(),
+        tagIds: [a],
+      ),
+    );
     await ledger.renameTag(a, '去旅行');
     expect(await db.select(db.tags).get(), hasLength(1));
     expect(await ledger.transactions(tagId: b), hasLength(1));
   });
 
   test('近幾個月收支', () async {
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 1000,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: DateTime(2026, 9, 15),
-    ));
-    await ledger.saveEntry(EntryDraft(
-      kind: EntryKind.expense, amount: 3000,
-      fromAccountId: cash, toAccountId: lunch, occurredAt: DateTime(2026, 10, 2),
-    ));
+    await ledger.saveEntry(
+      EntryDraft(
+        kind: EntryKind.expense,
+        amount: 1000,
+        fromAccountId: cash,
+        toAccountId: lunch,
+        occurredAt: DateTime(2026, 9, 15),
+      ),
+    );
+    await ledger.saveEntry(
+      EntryDraft(
+        kind: EntryKind.expense,
+        amount: 3000,
+        fromAccountId: cash,
+        toAccountId: lunch,
+        occurredAt: DateTime(2026, 10, 2),
+      ),
+    );
     final periods = await ledger.recentPeriods(3, 1, now: DateTime(2026, 10, 3));
     expect(periods.map((p) => p.start.month), [8, 9, 10]);
     expect(periods.map((p) => p.expense), [0, 1000, 3000]);
