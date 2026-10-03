@@ -13,6 +13,7 @@ import 'ui/home_screen.dart';
 import 'ui/reports_screen.dart';
 import 'ui/settings_screen.dart';
 import 'ui/transactions_screen.dart';
+import 'ui/update_ui.dart';
 
 class MoneyApp extends StatelessWidget {
   const MoneyApp({super.key});
@@ -98,6 +99,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int index = 0;
 
   static const _pages = [HomeScreen(), TransactionsScreen(), ReportsScreen(), AccountsScreen()];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => autoCheckForUpdate(context, ref));
+  }
 
   @override
   Widget build(BuildContext context) {

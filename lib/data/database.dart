@@ -182,6 +182,8 @@ abstract final class SettingKeys {
   static const biometricLock = 'biometric_lock';
   static const monthStartDay = 'month_start_day';
   static const onboarded = 'onboarded';
+  static const updateLastCheck = 'update_last_check';
+  static const updateDismissedBuild = 'update_dismissed_build';
 }
 
 /// 系統賬戶 id（固定，方便引擎搵返）
