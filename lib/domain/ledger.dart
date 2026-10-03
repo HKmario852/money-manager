@@ -83,7 +83,15 @@ class Ledger {
 
   // ---------------------------------------------------------------- 寫入
 
-  Future<String> saveEntry(EntryDraft d, {String? entryId, EntrySource source = EntrySource.manual}) async {
+  /// [status] / [externalId] 用喺自動記賬：`pending` 嘅分錄唔計入結餘同報表，等用戶確認。
+  /// 編輯現有分錄時 [status] 為 null 就唔改原本狀態。
+  Future<String> saveEntry(
+    EntryDraft d, {
+    String? entryId,
+    EntrySource source = EntrySource.manual,
+    EntryStatus? status,
+    String? externalId,
+  }) async {
     if (d.amount <= 0) throw LedgerException('金額要大過 0');
     if (d.fromAccountId == d.toAccountId) throw LedgerException('兩個賬戶唔可以一樣');
     final from = await _account(d.fromAccountId);
@@ -104,6 +112,8 @@ class Ledger {
                 note: Value(_blankToNull(d.note)),
                 merchant: Value(_blankToNull(d.merchant)),
                 source: Value(source),
+                status: Value(status ?? EntryStatus.posted),
+                externalId: Value(externalId),
               ),
             );
       } else {
@@ -113,6 +123,7 @@ class Ledger {
             occurredAt: Value(d.occurredAt),
             note: Value(_blankToNull(d.note)),
             merchant: Value(_blankToNull(d.merchant)),
+            status: status == null ? const Value.absent() : Value(status),
             updatedAt: Value(now),
           ),
         );
@@ -177,6 +188,13 @@ class Ledger {
   Future<void> deleteEntry(String id) async {
     await (db.update(db.journalEntries)..where((e) => e.id.equals(id))).write(
       JournalEntriesCompanion(deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())),
+    );
+  }
+
+  /// 確認自動記低嘅分錄，開始計入結餘。
+  Future<void> confirmEntry(String id) async {
+    await (db.update(db.journalEntries)..where((e) => e.id.equals(id))).write(
+      JournalEntriesCompanion(status: const Value(EntryStatus.posted), updatedAt: Value(DateTime.now())),
     );
   }
 
@@ -460,11 +478,14 @@ class Ledger {
     List<String>? entryIds,
     int? limit,
     bool includeSystem = false,
+    EntryStatus status = EntryStatus.posted,
   }) async {
     final accounts = {for (final a in await db.select(db.accounts).get()) a.id: a};
     final q = db.select(db.journalEntries)
       ..where((e) => e.deletedAt.isNull())
       ..orderBy([(e) => OrderingTerm.desc(e.occurredAt), (e) => OrderingTerm.desc(e.createdAt)]);
+    // 指定 id（交易詳情）就唔理狀態，咁待確認嘅都打得開
+    if (entryIds == null) q.where((e) => e.status.equalsValue(status));
     if (from != null) q.where((e) => e.occurredAt.isBiggerOrEqualValue(from));
     if (to != null) q.where((e) => e.occurredAt.isSmallerThanValue(to));
     if (kind != null) q.where((e) => e.kind.equalsValue(kind));

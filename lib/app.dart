@@ -7,6 +7,7 @@ import 'domain/ledger.dart';
 import 'domain/money.dart';
 import 'providers.dart';
 import 'ui/accounts_screen.dart';
+import 'ui/capture_ui.dart';
 import 'ui/common.dart';
 import 'ui/entry_screen.dart';
 import 'ui/home_screen.dart';
@@ -100,10 +101,27 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
   static const _pages = [HomeScreen(), TransactionsScreen(), ReportsScreen(), AccountsScreen()];
 
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => autoCheckForUpdate(context, ref));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      autoCheckForUpdate(context, ref);
+      _processNotifications();
+    });
+    // 每次返嚟 App 都處理喺背景收集到嘅付款通知
+    _lifecycle = AppLifecycleListener(onResume: _processNotifications);
+  }
+
+  void _processNotifications() {
+    if (mounted) processPendingNotifications(ref, messenger: ScaffoldMessenger.of(context));
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   @override

@@ -184,6 +184,13 @@ abstract final class SettingKeys {
   static const onboarded = 'onboarded';
   static const updateLastCheck = 'update_last_check';
   static const updateDismissedBuild = 'update_dismissed_build';
+  static const geminiModel = 'gemini_model';
+
+  /// 'confirm'（預設，入待確認）或者 'auto'（直接入賬）
+  static const captureMode = 'capture_mode';
+
+  /// Gemini 揀唔到賬戶時用嘅資金賬戶
+  static const captureDefaultFund = 'capture_default_fund';
 }
 
 /// 系統賬戶 id（固定，方便引擎搵返）

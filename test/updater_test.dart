@@ -31,9 +31,11 @@ void main() {
     expect(ReleaseInfo.fromGitHub(release(assets: [])), isNull);
     expect(
       ReleaseInfo.fromGitHub(
-        release(assets: [
-          {'name': 'notes.txt', 'browser_download_url': 'https://example.com/notes.txt', 'size': 1},
-        ]),
+        release(
+          assets: [
+            {'name': 'notes.txt', 'browser_download_url': 'https://example.com/notes.txt', 'size': 1},
+          ],
+        ),
       ),
       isNull,
     );

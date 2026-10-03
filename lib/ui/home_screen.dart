@@ -6,6 +6,7 @@ import '../domain/money.dart';
 import '../providers.dart';
 import 'accounts_screen.dart';
 import 'budgets_screen.dart';
+import 'capture_ui.dart';
 import 'common.dart';
 import 'entry_screen.dart';
 import 'settings_screen.dart';
@@ -49,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
+          const PendingCard(),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),

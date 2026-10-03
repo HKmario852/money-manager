@@ -51,9 +51,7 @@ Future<void> _offerUpdate(BuildContext context, WidgetRef ref, ReleaseInfo relea
     builder: (ctx) => AlertDialog(
       title: Text('有新版本 ${release.title}'),
       content: SingleChildScrollView(
-        child: Text(
-          [if (release.notes.isNotEmpty) release.notes, '更新會保留你所有記錄。$sizeMb'].join('\n\n'),
-        ),
+        child: Text([if (release.notes.isNotEmpty) release.notes, '更新會保留你所有記錄。$sizeMb'].join('\n\n')),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('遲啲')),
@@ -78,8 +76,10 @@ Future<void> _downloadAndInstall(BuildContext context, WidgetRef ref, ReleaseInf
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('要開一個權限'),
-        content: const Text('Android 要你批准「記錄課金」安裝 App，先可以喺 App 入面更新。\n\n'
-            '撳「去設定」之後開咗「允許此來源」，再返嚟撳一次更新。'),
+        content: const Text(
+          'Android 要你批准「記錄課金」安裝 App，先可以喺 App 入面更新。\n\n'
+          '撳「去設定」之後開咗「允許此來源」，再返嚟撳一次更新。',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('去設定')),

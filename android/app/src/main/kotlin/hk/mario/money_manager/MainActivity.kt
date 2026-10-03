@@ -14,6 +14,25 @@ import java.io.File
 class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hk.mario.money_manager/capture")
+            .setMethodCallHandler { call, result ->
+                val store = NotificationStore(this)
+                when (call.method) {
+                    "isAccessGranted" -> result.success(NotificationStore.isAccessGranted(this))
+                    "openAccessSettings" -> {
+                        NotificationStore.openAccessSettings(this)
+                        result.success(null)
+                    }
+                    "getAllowedPackages" -> result.success(store.allowedPackages().toList())
+                    "setAllowedPackages" -> {
+                        store.setAllowedPackages(call.argument<List<String>>("packages") ?: emptyList())
+                        result.success(null)
+                    }
+                    "launchableApps" -> result.success(store.launchableApps())
+                    "drain" -> result.success(store.drain().toString())
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hk.mario.money_manager/updater")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

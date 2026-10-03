@@ -136,6 +136,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
       toAccountId: to,
       occurredAt: date,
       note: note.text,
+      merchant: widget.existing?.entry.merchant ?? widget.initial?.merchant,
       tagIds: tagIds.toList(),
     );
   }
@@ -162,7 +163,12 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
     setState(() => saving = true);
     try {
       final ledger = ref.read(ledgerProvider);
-      final id = await ledger.saveEntry(_draft()!, entryId: widget.existing?.entry.id);
+      // 改完待確認嘅自動記錄 = 確認咗
+      final id = await ledger.saveEntry(
+        _draft()!,
+        entryId: widget.existing?.entry.id,
+        status: widget.existing == null ? null : EntryStatus.posted,
+      );
       final paths = ref.read(appPathsProvider);
       for (final src in newPhotos) {
         final name = '${newId()}${p.extension(src)}';

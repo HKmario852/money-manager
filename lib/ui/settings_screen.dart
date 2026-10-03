@@ -9,6 +9,7 @@ import '../data/database.dart';
 import '../domain/backup.dart';
 import '../providers.dart';
 import 'common.dart';
+import 'capture_ui.dart';
 import 'manage_screens.dart';
 import 'update_ui.dart';
 
@@ -70,6 +71,13 @@ class SettingsScreen extends ConsumerWidget {
               if (v && !await authenticateUser('確認開啟私隱鎖')) return;
               await db.setSetting(SettingKeys.biometricLock, '$v');
             },
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome),
+            title: const Text('自動記賬'),
+            subtitle: const Text('讀付款通知、八達通截圖，用 Gemini 自動記'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => push(const AutoCaptureSettingsScreen()),
           ),
           const Divider(),
           ListTile(

@@ -48,6 +48,7 @@ dependencies:
   intl: ^0.20.3
   flutter_localizations:
     sdk: flutter
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:

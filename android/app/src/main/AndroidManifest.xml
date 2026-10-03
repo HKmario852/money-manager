@@ -29,6 +29,16 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 自動記賬：讀用戶揀咗嘅 App（銀行、錢包…）嘅付款通知 -->
+        <service
+            android:name=".NotificationCaptureService"
+            android:exported="true"
+            android:label="記錄課金 自動記賬"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <provider
             android:name=".UpdateFileProvider"
             android:authorities="${applicationId}.updates"
@@ -50,6 +60,11 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- 自動記賬設定：列出有桌面圖示嘅 App 俾用戶揀 -->
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
