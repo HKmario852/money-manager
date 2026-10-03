@@ -60,6 +60,17 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) => v != null ? db.setSetting(SettingKeys.monthStartDay, '$v') : null,
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.savings_outlined),
+            title: const Text('儲蓄率目標'),
+            subtitle: const Text('統計頁會同你嘅實際儲蓄率比較'),
+            trailing: DropdownButton<int>(
+              value: ref.watch(savingsTargetProvider),
+              underline: const SizedBox(),
+              items: [for (var p = 0; p <= 90; p += 5) DropdownMenuItem(value: p, child: Text('$p%'))],
+              onChanged: (v) => v != null ? db.setSetting(SettingKeys.savingsTarget, '$v') : null,
+            ),
+          ),
           SwitchListTile(
             secondary: const Icon(Icons.fingerprint),
             title: const Text('私隱鎖'),

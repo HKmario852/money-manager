@@ -7,42 +7,119 @@ import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
 import 'common.dart';
+import 'theme.dart';
 import 'transactions_screen.dart';
 
+/// 黑色淨資產卡：大字淨資產、比上月變動、資產 / 負債比例條。
 class NetWorthCard extends ConsumerWidget {
-  const NetWorthCard({super.key});
+  const NetWorthCard({super.key, this.onTap});
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final nw = ref.watch(netWorthProvider);
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: nw.when(
-          loading: () => const SizedBox(height: 72),
-          error: (e, _) => Text('$e'),
-          data: (v) {
-            final (assets, liabilities) = v;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('淨資產', style: theme.textTheme.labelLarge),
-                AmountText(assets - liabilities, neutral: true, style: theme.textTheme.headlineMedium),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(child: Text('資產 ${formatMoney(assets)}')),
-                    Expanded(child: Text('負債 ${formatMoney(liabilities)}')),
-                  ],
+    final (periodStart, _) = ref.watch(thisPeriodProvider);
+    final before = ref.watch(netWorthAtProvider(periodStart)).value;
+    return AppCard(
+      color: AppColors.ink,
+      padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+      onTap: onTap,
+      child: nw.when(
+        loading: () => const SizedBox(height: 120),
+        error: (e, _) => Text('$e', style: const TextStyle(color: Colors.white)),
+        data: (v) {
+          final (assets, liabilities) = v;
+          final net = assets - liabilities;
+          final total = assets + liabilities;
+          final change = before == null ? null : net - before;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '淨資產',
+                      style: TextStyle(color: Color(0xFFB9BDC4), fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (change != null && change != 0) Pill('比上月 ${formatMoney(change, showPlus: true)}'),
+                ],
+              ),
+              const SizedBox(height: 10),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: BigMoney(net, color: Colors.white, dimColor: const Color(0xFF8C9099)),
+              ),
+              const SizedBox(height: 14),
+              if (total > 0)
+                ExcludeSemantics(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: SizedBox(
+                      height: 7,
+                      child: Row(
+                        children: [
+                          if (assets > 0)
+                            Expanded(
+                              flex: assets,
+                              child: Container(color: AppColors.lime),
+                            ),
+                          if (assets > 0 && liabilities > 0) const SizedBox(width: 3),
+                          if (liabilities > 0)
+                            Expanded(
+                              flex: liabilities < total ~/ 50 ? total ~/ 50 : liabilities,
+                              child: Container(color: const Color(0xFFF08A55)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            );
-          },
-        ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _Legend(AppColors.lime, '資產', assets)),
+                  Expanded(child: _Legend(const Color(0xFFF08A55), '負債', liabilities)),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend(this.color, this.label, this.amount);
+  final Color color;
+  final String label;
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(color: Color(0xFFB9BDC4), fontSize: 12)),
+        ],
+      ),
+      const SizedBox(height: 2),
+      Text(
+        formatMoney(amount),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+      ),
+    ],
+  );
 }
 
 class AccountsScreen extends ConsumerStatefulWidget {
@@ -60,53 +137,55 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     final accounts = ref.watch(accountsProvider);
     final balances = ref.watch(balancesProvider).value ?? const {};
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('賬戶'),
-        actions: [
-          IconButton(
-            tooltip: showArchived ? '隱藏已封存' : '顯示已封存',
-            icon: Icon(showArchived ? Icons.visibility_off : Icons.inventory_2_outlined),
-            onPressed: () => setState(() => showArchived = !showArchived),
-          ),
-          IconButton(
-            tooltip: '新增賬戶',
-            icon: const Icon(Icons.add),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountEditScreen())),
-          ),
-        ],
-      ),
-      body: asyncBody(accounts, (all) {
-        final funds = fundAccounts(all, includeArchived: showArchived);
-        final groups = <String, List<Account>>{};
-        for (final a in funds) {
-          groups.putIfAbsent(subtypeLabel(a.type, a.subtype), () => []).add(a);
-        }
-        return ListView(
-          padding: const EdgeInsets.all(12),
-          children: [
-            const NetWorthCard(),
-            for (final MapEntry(key: label, value: list) in groups.entries) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
-                child: Row(
-                  children: [
-                    Text(label, style: Theme.of(context).textTheme.titleSmall),
-                    const Spacer(),
-                    AmountText(
-                      list.fold(0, (s, a) => s + (balances[a.id] ?? 0)),
-                      neutral: true,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                  ],
-                ),
+      body: SafeArea(
+        child: asyncBody(accounts, (all) {
+          // 資產先，負債（信用卡）排尾
+          final unsorted = fundAccounts(all, includeArchived: showArchived);
+          final funds = [
+            ...unsorted.where((a) => a.type != AccountType.liability),
+            ...unsorted.where((a) => a.type == AccountType.liability),
+          ];
+          final hasArchived = fundAccounts(all, includeArchived: true).any((a) => a.isArchived);
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              PageHeader(
+                '帳戶',
+                actions: [
+                  CircleAction(
+                    tooltip: '新增帳戶',
+                    icon: Icons.add,
+                    onPressed: () =>
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountEditScreen())),
+                  ),
+                ],
               ),
-              Card(child: Column(children: [for (final a in list) _AccountTile(a, balances[a.id] ?? 0)])),
+              const SizedBox(height: 4),
+              const NetWorthCard(),
+              const SizedBox(height: 6),
+              SectionCard(
+                title: '我的帳戶',
+                trailing: hasArchived
+                    ? TextButton(
+                        onPressed: () => setState(() => showArchived = !showArchived),
+                        child: Text(showArchived ? '隱藏已封存' : '顯示已封存'),
+                      )
+                    : null,
+                child: funds.isEmpty
+                    ? const EmptyState('未有帳戶，撳右上角 + 新增')
+                    : Column(
+                        children: [
+                          for (var i = 0; i < funds.length; i++) ...[
+                            if (i > 0) const Divider(),
+                            _AccountTile(funds[i], balances[funds[i].id] ?? 0),
+                          ],
+                        ],
+                      ),
+              ),
             ],
-            if (funds.isEmpty) const EmptyState('未有賬戶，撳右上角 + 新增'),
-            const SizedBox(height: 96),
-          ],
-        );
-      }),
+          );
+        }),
+      ),
     );
   }
 }
@@ -121,26 +200,49 @@ class _AccountTile extends StatelessWidget {
     final isCard = account.subtype == AccountSubtype.creditCard;
     final owed = -signedBalance;
     final limit = account.creditLimit;
-    return ListTile(
-      leading: AccountAvatar(account),
-      title: Text(account.name + (account.isArchived ? '（已封存）' : '')),
-      subtitle: isCard && limit != null && limit > 0
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                ExcludeSemantics(child: LinearProgressIndicator(value: (owed / limit).clamp(0, 1).toDouble())),
-                const SizedBox(height: 2),
-                Text('可用 ${formatMoney(limit - owed)} / 額度 ${formatMoney(limit)}'),
-              ],
-            )
-          : null,
-      trailing: AmountText(
-        account.type == AccountType.liability ? -owed : signedBalance,
-        neutral: account.type == AccountType.asset,
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
+    final display = account.type == AccountType.liability ? -owed : signedBalance;
+    final String subtitle;
+    Color subColor = AppColors.muted;
+    if (isCard && limit != null && limit > 0) {
+      final pct = (owed * 100 / limit).round();
+      subtitle = '已用額度 $pct% · 可用 ${formatMoney(limit - owed)}';
+      if (pct >= 80) subColor = AppColors.orange;
+    } else {
+      subtitle = subtypeLabel(account.type, account.subtype);
+    }
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.tile),
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AccountDetailScreen(account.id))),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            AccountAvatar(account, radius: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    account.name + (account.isArchived ? '（已封存）' : ''),
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(color: subColor, fontSize: 12)),
+                ],
+              ),
+            ),
+            Text(
+              formatMoney(display),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -184,10 +286,9 @@ class AccountDetailScreen extends ConsumerWidget {
           list,
           forAccount: id,
           accounts: accounts,
-          header: Card(
-            margin: const EdgeInsets.all(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+          header: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: AppCard(
               child: Row(
                 children: [
                   Expanded(
@@ -195,7 +296,7 @@ class AccountDetailScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(account.type == AccountType.liability ? '欠款' : '結餘'),
-                        Text(formatMoney(display), style: Theme.of(context).textTheme.headlineMedium),
+                        BigMoney(display, size: 32),
                       ],
                     ),
                   ),
