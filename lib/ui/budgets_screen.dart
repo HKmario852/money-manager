@@ -80,11 +80,13 @@ class BudgetBar extends StatelessWidget {
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: s.ratio.clamp(0, 1).toDouble(),
-              minHeight: 8,
-              color: c,
-              backgroundColor: c.withValues(alpha: 0.15),
+            child: ExcludeSemantics(
+              child: LinearProgressIndicator(
+                value: s.ratio.clamp(0, 1).toDouble(),
+                minHeight: 8,
+                color: c,
+                backgroundColor: c.withValues(alpha: 0.15),
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -158,7 +160,11 @@ class BudgetsScreen extends ConsumerWidget {
     final (start, _) = ref.watch(thisPeriodProvider);
     return Scaffold(
       appBar: AppBar(title: Text('預算 · ${periodLabel(start)}')),
-      floatingActionButton: FloatingActionButton(onPressed: () => _edit(context, ref), child: const Icon(Icons.add)),
+      floatingActionButton: FloatingActionButton(
+        tooltip: '新增預算',
+        onPressed: () => _edit(context, ref),
+        child: const Icon(Icons.add),
+      ),
       body: asyncBody(status, (list) {
         if (list.isEmpty) return const EmptyState('未設預算。撳 + 設定每月總預算或者分類上限。');
         return ListView(
