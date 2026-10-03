@@ -218,7 +218,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
       for (final a in widget.existing?.attachments ?? const <Attachment>[]) {
         if (removedAttachments.contains(a.id)) {
           await ledger.removeAttachment(a.id);
-          final f = File(p.join(paths.attachments, a.filePath));
+          final f = File(p.join(paths.attachments, p.basename(a.filePath)));
           if (await f.exists()) await f.delete();
         }
       }
@@ -509,7 +509,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
                           children: [
                             for (final a in existingAtts)
                               _Thumb(
-                                File(p.join(attachmentsDir, a.filePath)),
+                                File(p.join(attachmentsDir, p.basename(a.filePath))),
                                 onRemove: () => setState(() => removedAttachments.add(a.id)),
                               ),
                             for (final path in newPhotos)

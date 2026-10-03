@@ -308,6 +308,7 @@ Future<String?> promptText(
   String initial = '',
   String? hint,
   TextInputType? keyboard,
+  bool obscure = false,
 }) {
   final controller = TextEditingController(text: initial);
   return showDialog<String>(
@@ -318,6 +319,7 @@ Future<String?> promptText(
         controller: controller,
         autofocus: true,
         keyboardType: keyboard,
+        obscureText: obscure,
         decoration: InputDecoration(hintText: hint),
         onSubmitted: (v) => Navigator.pop(c, v),
       ),
