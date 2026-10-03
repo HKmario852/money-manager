@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,7 +29,68 @@ class MoneyApp extends StatelessWidget {
       locale: const Locale('zh', 'HK'),
       supportedLocales: const [Locale('zh', 'HK'), Locale('zh', 'TW'), Locale('en')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      builder: (context, child) => _PrivacyGuard(child: child!),
       home: const _Gate(),
+    );
+  }
+}
+
+const _secureChannel = MethodChannel('hk.mario.money_manager/secure');
+
+/// 開咗私隱鎖時：Android 禁止截圖同「最近使用」縮圖；App 唔喺前景時用遮罩蓋住內容。
+class _PrivacyGuard extends ConsumerStatefulWidget {
+  const _PrivacyGuard({required this.child});
+  final Widget child;
+
+  @override
+  ConsumerState<_PrivacyGuard> createState() => _PrivacyGuardState();
+}
+
+class _PrivacyGuardState extends ConsumerState<_PrivacyGuard> {
+  late final AppLifecycleListener _lifecycle;
+  bool _covered = false;
+  bool? _secure;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onInactive: () => setState(() => _covered = true),
+      onResume: () => setState(() => _covered = false),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  Future<void> _setSecure(bool on) async {
+    if (_secure == on || defaultTargetPlatform != TargetPlatform.android) return;
+    _secure = on;
+    try {
+      await _secureChannel.invokeMethod<void>('setSecure', on);
+    } on MissingPluginException {
+      // 測試環境冇原生端
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final locked = ref.watch(settingsProvider).value?[SettingKeys.biometricLock] == 'true';
+    _setSecure(locked);
+    return Stack(
+      children: [
+        widget.child,
+        if (locked && _covered)
+          const Positioned.fill(
+            child: ColoredBox(
+              color: AppColors.ink,
+              child: Center(child: Icon(Icons.lock_outline, size: 56, color: AppColors.lime)),
+            ),
+          ),
+      ],
     );
   }
 }

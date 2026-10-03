@@ -431,13 +431,15 @@ class TransactionDetailScreen extends ConsumerWidget {
                         builder: (_) => Scaffold(
                           backgroundColor: Colors.black,
                           appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
-                          body: InteractiveViewer(child: Center(child: Image.file(File(p.join(attDir, a.filePath))))),
+                          body: InteractiveViewer(
+                            child: Center(child: Image.file(File(p.join(attDir, p.basename(a.filePath))))),
+                          ),
                         ),
                       ),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(File(p.join(attDir, a.filePath)), height: 200, fit: BoxFit.cover),
+                      child: Image.file(File(p.join(attDir, p.basename(a.filePath))), height: 200, fit: BoxFit.cover),
                     ),
                   ),
                 ),
