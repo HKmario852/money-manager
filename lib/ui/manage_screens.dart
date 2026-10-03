@@ -199,6 +199,7 @@ class TagsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Tag')),
       floatingActionButton: FloatingActionButton(
+        tooltip: '新增 Tag',
         onPressed: () async {
           final v = await promptText(context, '新 Tag', hint: '例如 去旅行');
           if (v != null && v.trim().isNotEmpty) await ledger.createTag(v);
