@@ -156,6 +156,23 @@ class HomeShell extends ConsumerStatefulWidget {
 
 class _HomeShellState extends ConsumerState<HomeShell> {
   static const _pages = [HomeScreen(), ReportsScreen(), BudgetsScreen(), AccountsScreen()];
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // 開 App 同返回前景時攞通知同 Gmail 收據
+    _lifecycle = AppLifecycleListener(onResume: _sync);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+  }
+
+  void _sync() => ref.read(captureSyncProvider).run();
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

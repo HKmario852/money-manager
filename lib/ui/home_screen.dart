@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../domain/money.dart';
 import '../providers.dart';
 import 'budgets_screen.dart';
+import 'capture_screens.dart';
 import 'common.dart';
 import 'entry_screen.dart';
 import 'settings_screen.dart';
@@ -86,6 +87,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const PendingCapturesCard(),
             if (budgets.isNotEmpty) ...[
               const SizedBox(height: 6),
               SectionCard(

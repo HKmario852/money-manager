@@ -15,9 +15,36 @@ import 'theme.dart';
 
 const _lastFundKey = 'last_fund_account';
 
+/// 部分預填（例如由自動捕捉嚟），分類同賬戶可以未有。
+class EntrySeed {
+  const EntrySeed({
+    required this.kind,
+    required this.occurredAt,
+    this.amount,
+    this.categoryId,
+    this.fundId,
+    this.toFundId,
+    this.note,
+    this.merchant,
+  });
+  final EntryKind kind;
+  final DateTime occurredAt;
+  final int? amount;
+  final String? categoryId;
+  final String? fundId;
+
+  /// 轉賬嘅轉入賬戶
+  final String? toFundId;
+  final String? note;
+  final String? merchant;
+}
+
 /// 記賬畫面（新增 / 編輯 / 複製）。
 class EntryScreen extends ConsumerStatefulWidget {
-  const EntryScreen({super.key, this.existing, this.initial});
+  const EntryScreen({super.key, this.existing, this.initial, this.seed});
+
+  /// 由自動捕捉開：存完返回新交易 id，唔會記住「上次用嘅賬戶」以外嘅嘢
+  final EntrySeed? seed;
 
   /// 編輯緊嘅交易
   final TxView? existing;
@@ -35,6 +62,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   String? fundId; // 支出/收入嘅資金賬戶；轉賬嘅「由」
   String? toFundId; // 轉賬嘅「去」
   String? categoryId;
+  String? merchant;
   DateTime date = DateTime.now();
   final note = TextEditingController();
   Set<String> tagIds = {};
@@ -52,14 +80,26 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
       expr = minorToInput(e.amount);
       date = e.entry.occurredAt;
       note.text = e.entry.note ?? '';
+      merchant = e.entry.merchant;
       tagIds = e.tags.map((t) => t.id).toSet();
       _setAccounts(e.from.id, e.to.id);
+    } else if (widget.seed case final seed?) {
+      kind = seed.kind;
+      expr = seed.amount != null ? minorToInput(seed.amount!) : '';
+      date = seed.occurredAt;
+      note.text = seed.note ?? '';
+      merchant = seed.merchant;
+      fundId = seed.fundId;
+      categoryId = seed.categoryId;
+      toFundId = seed.toFundId;
+      if (fundId == null) _loadLastFund();
     } else if (d != null) {
       kind = d.kind;
       expr = minorToInput(d.amount);
       date = d.occurredAt;
       note.text = d.note ?? '';
       tagIds = d.tagIds.toSet();
+      merchant = d.merchant;
       _setAccounts(d.fromAccountId, d.toAccountId);
     } else {
       _loadLastFund();
@@ -181,6 +221,7 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
       occurredAt: date,
       note: note.text,
       tagIds: tagIds.toList(),
+      merchant: merchant,
     );
   }
 
