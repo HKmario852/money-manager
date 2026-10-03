@@ -2,7 +2,11 @@ package hk.mario.money_manager
 
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import androidx.core.content.FileProvider
+import java.io.File
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -60,6 +64,30 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     else -> result.notImplemented()
                 }
+            }
+
+        // App 內更新：打開系統安裝畫面
+        MethodChannel(messenger, "hk.mario.money_manager/update")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "installApk") return@setMethodCallHandler result.notImplemented()
+                val file = File(call.arguments as? String ?: "")
+                val updates = File(cacheDir, "updates").canonicalFile
+                if (!file.exists() || file.canonicalFile.parentFile != updates) {
+                    return@setMethodCallHandler result.error("bad_path", "搵唔到下載咗嘅更新檔", null)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+                    startActivity(
+                        Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")),
+                    )
+                    return@setMethodCallHandler result.success("needs_permission")
+                }
+                val uri = FileProvider.getUriForFile(this, "$packageName.updates", file)
+                startActivity(
+                    Intent(Intent.ACTION_VIEW)
+                        .setDataAndType(uri, "application/vnd.android.package-archive")
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+                result.success("started")
             }
     }
 

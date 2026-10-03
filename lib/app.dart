@@ -16,6 +16,7 @@ import 'ui/budgets_screen.dart';
 import 'ui/reports_screen.dart';
 import 'ui/settings_screen.dart';
 import 'ui/theme.dart';
+import 'ui/update_ui.dart';
 
 class MoneyApp extends StatelessWidget {
   const MoneyApp({super.key});
@@ -163,7 +164,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     super.initState();
     // 開 App 同返回前景時攞通知同 Gmail 收據
     _lifecycle = AppLifecycleListener(onResume: _sync);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _sync());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sync();
+      checkForUpdate(context, ref);
+    });
   }
 
   void _sync() => ref.read(captureSyncProvider).run();

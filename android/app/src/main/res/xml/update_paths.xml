@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 只開放 cache/updates 入面下載好嘅 APK 俾安裝程式讀 -->
+<paths>
+    <cache-path name="updates" path="updates/" />
+</paths>

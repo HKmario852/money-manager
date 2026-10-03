@@ -22,6 +22,10 @@ jobs:
   android:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -34,8 +38,33 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
-      - run: flutter build apk --release
+      # 固定簽署金鑰（由 tools/setup-android-signing.ps1 放入 GitHub Secrets），新版本先可以直接蓋過舊版
+      - name: Release signing key
+        if: env.KEYSTORE_BASE64 != ''
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/release.jks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEYSTORE_PASSWORD" > android/key.properties
+      - run: flutter build apk --release --build-number=${{ github.run_number }}
       - uses: actions/upload-artifact@v4
         with:
           name: money-manager-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+      # main 每次更新都出一個 Release，App 入面「檢查更新」就係睇呢度
+      - name: Publish release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::未設定簽署金鑰，唔出 Release。請喺電腦行 tools/setup-android-signing.ps1"
+            exit 0
+          fi
+          name=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          apk="money-manager-$name-build$BUILD.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$apk"
+          gh release create "build-$BUILD" "$apk" --title "v$name (build $BUILD)" --generate-notes --target "$GITHUB_SHA"
