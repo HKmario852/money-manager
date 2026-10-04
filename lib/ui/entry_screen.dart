@@ -339,7 +339,8 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
     final byId = {for (final a in accounts) a.id: a};
-    final balances = ref.watch(balancesProvider).value ?? const {};
+    final spendingOnly = ref.watch(spendingOnlyProvider);
+    final balances = spendingOnly ? null : ref.watch(balancesProvider).value ?? const {};
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
     final funds = fundAccounts(accounts);
     final kindColor = kind == EntryKind.income ? incomeColor : expenseColor;
@@ -395,7 +396,12 @@ class _EntryScreenState extends ConsumerState<EntryScreen> {
                     Expanded(
                       child: Center(
                         child: PillSegment<EntryKind>(
-                          options: const {EntryKind.expense: '支出', EntryKind.income: '收入', EntryKind.transfer: '轉帳'},
+                          options: {
+                            EntryKind.expense: '支出',
+                            EntryKind.income: '收入',
+                            // 只記支出模式唔使轉帳（除非改緊一筆轉帳）
+                            if (!spendingOnly || kind == EntryKind.transfer) EntryKind.transfer: '轉帳',
+                          },
                           value: kind,
                           onChanged: (k) => setState(() {
                             if (k != kind) categoryId = null;
