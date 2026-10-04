@@ -5,6 +5,7 @@ import '../money.dart';
 import 'parser.dart';
 
 const defaultGeminiModel = 'gemini-2.5-flash';
+const fallbackGeminiModel = 'gemini-2.5-flash-lite';
 
 class GeminiException implements Exception {
   const GeminiException(this.message);
@@ -15,11 +16,18 @@ class GeminiException implements Exception {
 
 /// Gemini 讀唔到規則處理唔到嘅通知 / 電郵。只會傳送嗰一段文字，唔會傳其他帳目資料。
 class GeminiParser {
-  GeminiParser({required this.apiKey, this.model = defaultGeminiModel, HttpClient? client})
-    : _client = client ?? HttpClient();
+  GeminiParser({
+    required this.apiKey,
+    this.model = defaultGeminiModel,
+    HttpClient? client,
+    this.baseUrl = 'https://generativelanguage.googleapis.com',
+    this.retryDelay = const Duration(seconds: 2),
+  }) : _client = client ?? HttpClient();
 
   final String apiKey;
   final String model;
+  final String baseUrl;
+  final Duration retryDelay;
   final HttpClient _client;
 
   static const _schema = {
@@ -120,40 +128,48 @@ If the image is not an Octopus transaction list, set is_octopus_history to false
   }
 
   Future<String?> _generate(List<Map<String, Object>> parts, Map<String, Object> schema) async {
-    final uri = Uri.https('generativelanguage.googleapis.com', '/v1beta/models/$model:generateContent');
-    final Map<String, dynamic> json;
+    final body = utf8.encode(
+      jsonEncode({
+        'contents': [
+          {'parts': parts},
+        ],
+        'generationConfig': {'responseMimeType': 'application/json', 'responseSchema': schema, 'temperature': 0},
+      }),
+    );
+    // Google 繁忙（500/503）好常見：等一陣再試一次，再唔得就轉用較輕嘅後備模型
+    final attempts = [model, model, if (model == defaultGeminiModel) fallbackGeminiModel];
+    (int, String)? busy;
+    for (var i = 0; i < attempts.length; i++) {
+      if (i > 0) await Future<void>.delayed(retryDelay * i);
+      final (status, text) = await _post(attempts[i], body);
+      if (status == 200) {
+        final json = jsonDecode(text) as Map<String, dynamic>;
+        final candParts = (json['candidates'] as List?)?.firstOrNull?['content']?['parts'] as List?;
+        return candParts?.firstOrNull?['text'] as String?;
+      }
+      if (status == 500 || status == 503) {
+        busy = (status, text);
+        continue;
+      }
+      // 後備模型唔存在就照報原本嘅繁忙錯誤
+      if (busy != null && attempts[i] != model) break;
+      throw GeminiException(geminiErrorMessage(status, text, attempts[i]));
+    }
+    throw GeminiException(geminiErrorMessage(busy!.$1, busy.$2, model));
+  }
+
+  Future<(int, String)> _post(String model, List<int> body) async {
+    final uri = Uri.parse('$baseUrl/v1beta/models/$model:generateContent');
     try {
       final req = await _client.postUrl(uri).timeout(const Duration(seconds: 20));
       req.headers.contentType = ContentType.json;
       req.headers.set('x-goog-api-key', apiKey);
-      req.add(
-        utf8.encode(
-          jsonEncode({
-            'contents': [
-              {'parts': parts},
-            ],
-            'generationConfig': {'responseMimeType': 'application/json', 'responseSchema': schema, 'temperature': 0},
-          }),
-        ),
-      );
+      req.add(body);
       final res = await req.close().timeout(const Duration(seconds: 60));
-      final text = await res.transform(utf8.decoder).join();
-      if (res.statusCode != 200) {
-        throw GeminiException(switch (res.statusCode) {
-          400 || 403 => 'Gemini API key 唔啱或者冇權限',
-          404 => '搵唔到 Gemini 模型「$model」，請喺設定改模型名',
-          429 => 'Gemini 用量到咗上限，遲啲再試',
-          _ => 'Gemini 出錯（${res.statusCode}）',
-        });
-      }
-      json = jsonDecode(text) as Map<String, dynamic>;
-    } on GeminiException {
-      rethrow;
+      return (res.statusCode, await res.transform(utf8.decoder).join());
     } on Exception catch (e) {
       throw GeminiException('連唔到 Gemini：$e');
     }
-    final candParts = (json['candidates'] as List?)?.firstOrNull?['content']?['parts'] as List?;
-    return candParts?.firstOrNull?['text'] as String?;
   }
 
   void close() => _client.close(force: true);
@@ -233,4 +249,38 @@ List<OctopusRow>? decodeOctopusRows(String raw) {
     );
   }
   return out;
+}
+
+/// 將 Gemini 嘅錯誤回應轉做用戶睇得明嘅原因（400/403 有好多種，唔一定係 key 錯）。
+String geminiErrorMessage(int status, String body, String model) {
+  String message = '';
+  final reasons = <String>{};
+  try {
+    final error = (jsonDecode(body) as Map<String, dynamic>)['error'] as Map<String, dynamic>;
+    message = error['message'] as String? ?? '';
+    for (final d in (error['details'] as List? ?? const []).whereType<Map<String, dynamic>>()) {
+      if (d['reason'] is String) reasons.add(d['reason'] as String);
+    }
+  } catch (_) {}
+  final lower = message.toLowerCase();
+  if (reasons.contains('API_KEY_INVALID') || lower.contains('api key not valid')) {
+    return 'Gemini API key 唔啱，請喺 Google AI Studio 重新複製成條 key';
+  }
+  if (lower.contains('location is not supported') || lower.contains('not available in your country')) {
+    return 'Google 話你而家嘅地區用唔到 Gemini API（香港唔喺支援地區）';
+  }
+  if (reasons.contains('SERVICE_DISABLED')) {
+    return '呢條 key 嘅 Google Cloud 項目未開 Generative Language API';
+  }
+  if (reasons.any((r) => r.startsWith('API_KEY_') && r.endsWith('_BLOCKED'))) {
+    return '呢條 key 設咗限制，唔准用 Gemini API，請喺 Google Cloud 改 key 嘅限制';
+  }
+  final detail = message.isEmpty ? '' : '：${message.length > 160 ? '${message.substring(0, 160)}…' : message}';
+  return switch (status) {
+    404 => '搵唔到 Gemini 模型「$model」，請喺設定改模型名',
+    429 => 'Gemini 用量到咗上限，遲啲再試',
+    500 || 503 => 'Google 嘅 Gemini 而家太多人用（$status），你條 key 冇問題，遲啲再試',
+    400 || 403 => 'Gemini 拒絕咗個請求（$status）$detail',
+    _ => 'Gemini 出錯（$status）$detail',
+  };
 }
