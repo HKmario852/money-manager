@@ -137,6 +137,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider);
     final balances = ref.watch(balancesProvider).value ?? const {};
+    final spendingOnly = ref.watch(spendingOnlyProvider);
     return Scaffold(
       body: SafeArea(
         child: asyncBody(accounts, (all) {
@@ -162,8 +163,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 ],
               ),
               const SizedBox(height: 4),
-              const NetWorthCard(),
-              const SizedBox(height: 6),
+              if (!spendingOnly) ...[const NetWorthCard(), const SizedBox(height: 6)],
               SectionCard(
                 title: '我的帳戶',
                 trailing: hasArchived
@@ -178,7 +178,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                         children: [
                           for (var i = 0; i < funds.length; i++) ...[
                             if (i > 0) const Divider(),
-                            _AccountTile(funds[i], balances[funds[i].id] ?? 0),
+                            _AccountTile(funds[i], spendingOnly ? null : balances[funds[i].id] ?? 0),
                           ],
                         ],
                       ),
@@ -194,17 +194,19 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 class _AccountTile extends StatelessWidget {
   const _AccountTile(this.account, this.signedBalance);
   final Account account;
-  final int signedBalance;
+
+  /// null = 只記支出模式，唔顯示結餘
+  final int? signedBalance;
 
   @override
   Widget build(BuildContext context) {
     final isCard = account.subtype == AccountSubtype.creditCard;
-    final owed = -signedBalance;
+    final owed = -(signedBalance ?? 0);
     final limit = account.creditLimit;
-    final display = account.type == AccountType.liability ? -owed : signedBalance;
+    final display = signedBalance == null ? null : (account.type == AccountType.liability ? -owed : signedBalance);
     final String subtitle;
     Color subColor = AppColors.muted;
-    if (isCard && limit != null && limit > 0) {
+    if (signedBalance != null && isCard && limit != null && limit > 0) {
       final pct = (owed * 100 / limit).round();
       subtitle = '已用額度 $pct% · 可用 ${formatMoney(limit - owed)}';
       if (pct >= 80) subColor = AppColors.orange;
@@ -233,14 +235,17 @@ class _AccountTile extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              formatMoney(display),
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
+            if (display != null)
+              Text(
+                formatMoney(display),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              )
+            else
+              const Icon(Icons.chevron_right, color: AppColors.muted),
           ],
         ),
       ),
@@ -270,6 +275,7 @@ class AccountDetailScreen extends ConsumerWidget {
     final txs = ref.watch(transactionsProvider(filter));
     if (account == null) return const Scaffold(body: SizedBox());
     final display = toDisplay(account.type, balance);
+    final spendingOnly = ref.watch(spendingOnlyProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(account.name),
@@ -287,57 +293,63 @@ class AccountDetailScreen extends ConsumerWidget {
           list,
           forAccount: id,
           accounts: accounts,
-          header: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: AppCard(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          // 只記支出：唔顯示結餘，八達通淨係留匯入截圖
+          header: spendingOnly && !_isOctopus(account)
+              ? null
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: AppCard(
+                    child: Row(
                       children: [
-                        Text(account.type == AccountType.liability ? '欠款' : '結餘'),
-                        BigMoney(display, size: 32),
+                        Expanded(
+                          child: spendingOnly
+                              ? const Text('八達通交易紀錄截圖')
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(account.type == AccountType.liability ? '欠款' : '結餘'),
+                                    BigMoney(display, size: 32),
+                                  ],
+                                ),
+                        ),
+                        if (_isOctopus(account)) ...[
+                          IconButton.outlined(
+                            tooltip: '匯入八達通截圖',
+                            icon: const Icon(Icons.add_photo_alternate_outlined),
+                            onPressed: () => importOctopusScreenshots(context, ref),
+                          ),
+                          if (!spendingOnly && ref.read(notificationBridgeProvider).supported)
+                            IconButton.outlined(
+                              tooltip: '拍卡同步餘額',
+                              icon: const Icon(Icons.contactless_outlined),
+                              onPressed: () => syncOctopusBalance(context, ref, account),
+                            ),
+                          const SizedBox(width: 4),
+                        ],
+                        if (!spendingOnly)
+                          OutlinedButton(
+                            onPressed: () async {
+                              final v = await promptText(
+                                context,
+                                account.type == AccountType.liability ? '實際欠款' : '實際結餘',
+                                initial: minorToInput(display),
+                                keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                              );
+                              if (v == null) return;
+                              final neg = v.trim().startsWith('-');
+                              final parsed = parseMinor(v.trim().replaceFirst('-', ''));
+                              if (parsed == null) {
+                                if (context.mounted) showError(context, '金額唔啱');
+                                return;
+                              }
+                              await ref.read(ledgerProvider).adjustBalance(id, neg ? -parsed : parsed);
+                            },
+                            child: const Text('調整結餘'),
+                          ),
                       ],
                     ),
                   ),
-                  if (_isOctopus(account)) ...[
-                    IconButton.outlined(
-                      tooltip: '匯入八達通截圖',
-                      icon: const Icon(Icons.add_photo_alternate_outlined),
-                      onPressed: () => importOctopusScreenshots(context, ref),
-                    ),
-                    if (ref.read(notificationBridgeProvider).supported)
-                      IconButton.outlined(
-                        tooltip: '拍卡同步餘額',
-                        icon: const Icon(Icons.contactless_outlined),
-                        onPressed: () => syncOctopusBalance(context, ref, account),
-                      ),
-                    const SizedBox(width: 4),
-                  ],
-                  OutlinedButton(
-                    onPressed: () async {
-                      final v = await promptText(
-                        context,
-                        account.type == AccountType.liability ? '實際欠款' : '實際結餘',
-                        initial: minorToInput(display),
-                        keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      );
-                      if (v == null) return;
-                      final neg = v.trim().startsWith('-');
-                      final parsed = parseMinor(v.trim().replaceFirst('-', ''));
-                      if (parsed == null) {
-                        if (context.mounted) showError(context, '金額唔啱');
-                        return;
-                      }
-                      await ref.read(ledgerProvider).adjustBalance(id, neg ? -parsed : parsed);
-                    },
-                    child: const Text('調整結餘'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
         ),
       ),
     );
@@ -443,6 +455,7 @@ class _AccountEditScreenState extends ConsumerState<AccountEditScreen> {
   @override
   Widget build(BuildContext context) {
     final a = widget.account;
+    final spendingOnly = ref.watch(spendingOnlyProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(editing ? '編輯賬戶' : '新增賬戶'),
@@ -484,7 +497,7 @@ class _AccountEditScreenState extends ConsumerState<AccountEditScreen> {
             controller: name,
             decoration: const InputDecoration(labelText: '名稱', hintText: '例如 滙豐儲蓄、八達通'),
           ),
-          if (!editing)
+          if (!editing && !spendingOnly)
             TextField(
               controller: opening,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -493,7 +506,7 @@ class _AccountEditScreenState extends ConsumerState<AccountEditScreen> {
                 prefixText: '\$ ',
               ),
             ),
-          if (kind.$2 == AccountSubtype.creditCard)
+          if (kind.$2 == AccountSubtype.creditCard && !spendingOnly)
             TextField(
               controller: limit,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),

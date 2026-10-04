@@ -99,6 +99,11 @@ final monthStartDayProvider = Provider<int>((ref) {
   return int.tryParse(v ?? '') ?? 1;
 });
 
+/// 只記支出模式：唔顯示淨資產同帳戶結餘。
+final spendingOnlyProvider = Provider<bool>(
+  (ref) => ref.watch(settingsProvider).value?[SettingKeys.spendingOnly] == 'true',
+);
+
 /// 底部導航揀咗邊頁：0 首頁、1 統計、2 預算、3 帳戶。
 class HomeTab extends Notifier<int> {
   @override

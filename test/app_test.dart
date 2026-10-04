@@ -158,4 +158,40 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await settle(tester);
   });
+
+  testWidgets('只記支出：唔顯示淨資產同帳戶結餘', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.75;
+    addTearDown(tester.view.reset);
+    await db.setSetting(SettingKeys.onboarded, 'true');
+    await db.setSetting(SettingKeys.spendingOnly, 'true');
+    await tester.pumpWidget(app());
+    await settle(tester);
+    expect(find.text('淨資產'), findsNothing);
+
+    await tester.tap(find.text('帳戶').last);
+    await settle(tester);
+    expect(find.text('我的帳戶'), findsOneWidget);
+    expect(find.textContaining('HK\$'), findsNothing);
+
+    // 新增帳戶淨係要名
+    await tester.tap(find.byTooltip('新增帳戶'));
+    await settle(tester);
+    expect(find.text('而家結餘'), findsNothing);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+
+    // 記賬冇轉帳
+    await tester.tap(find.text('首頁'));
+    await settle(tester);
+    await tester.tap(find.byTooltip('記一筆'));
+    await settle(tester);
+    expect(find.text('支出'), findsWidgets);
+    expect(find.text('轉帳'), findsNothing);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+
+    await tester.pumpWidget(const SizedBox());
+    await settle(tester);
+  });
 }

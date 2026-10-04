@@ -263,6 +263,9 @@ abstract final class SettingKeys {
   static const onboarded = 'onboarded';
   static const savingsTarget = 'savings_target';
 
+  /// 只記支出：收埋淨資產同帳戶結餘，帳戶淨係當付款方法
+  static const spendingOnly = 'spending_only';
+
   /// 自動捕捉：確認咗分類同賬戶就直接入帳，唔使撳 ✓
   static const autoConfirm = 'capture_auto_confirm';
 

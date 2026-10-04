@@ -23,7 +23,7 @@ class HomeScreen extends ConsumerWidget {
     final accounts = ref.watch(accountMapProvider);
     final templates = ref.watch(templatesProvider).value ?? const <Template>[];
     final budgets = ref.watch(budgetStatusProvider).value ?? const <BudgetStatus>[];
-    final netWorth = ref.watch(netWorthProvider).value;
+    final netWorth = ref.watch(spendingOnlyProvider) ? null : ref.watch(netWorthProvider).value;
     final TxFilter recentFilter = (
       from: null,
       to: null,
