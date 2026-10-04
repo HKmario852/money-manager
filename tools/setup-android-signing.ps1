@@ -32,6 +32,13 @@ if (-not $keytool) {
 if (-not $keytool) { throw 'keytool not found. Install Android Studio or a JDK, then run again.' }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'GitHub CLI (gh) not found: https://cli.github.com' }
 
+# A key already in GitHub secrets means releases are signed with it. Replacing it would stop
+# installed copies from updating, so refuse unless explicitly forced.
+$existing = gh secret list -R $repo | Select-String -SimpleMatch 'ANDROID_KEYSTORE_BASE64'
+if ($existing -and -not $env:FORCE_NEW_SIGNING_KEY) {
+    throw 'ANDROID_KEYSTORE_BASE64 is already set on GitHub. Keep using that key (back it up). Set FORCE_NEW_SIGNING_KEY=1 only if you really want a new key; installed apps will then need one uninstall.'
+}
+
 New-Item -ItemType Directory -Force $dir | Out-Null
 $bytes = New-Object byte[] 24
 [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
