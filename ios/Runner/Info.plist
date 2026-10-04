@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>NSFaceIDUsageDescription</key>
-	<string>用 Face ID 解鎖記錄課金</string>
+	<string>用 Face ID 解鎖 Money Expense</string>
 	<key>NSCameraUsageDescription</key>
 	<string>影收據相留底</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -17,7 +17,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>記錄課金</string>
+	<string>Money Expense</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

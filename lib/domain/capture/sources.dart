@@ -162,7 +162,7 @@ class GmailBridge {
 /// 貼入 Google Apps Script 嘅程式碼（已經填好密鑰）。
 String gmailScriptSource(String token) =>
     '''
-// 記錄課金：將 Gmail 收據交俾 App。只會讀符合 QUERY 嘅電郵。
+// Money Expense：將 Gmail 收據交俾 App。只會讀符合 QUERY 嘅電郵。
 const TOKEN = '$token';
 const QUERY = 'from:googleplay-noreply@google.com';
 
