@@ -303,7 +303,8 @@ class CaptureService {
   });
 
   /// 舊版本讀錯咗嘅 Play 收據（項目名得個「。」、成封電郵做內容、付款方法當咗 Google Play）：
-  /// 用新規則重新讀。Takeout 已經有同一張訂單就用返 Takeout 嗰筆。返回修正咗幾多筆。
+  /// 用新規則重新讀。Takeout 已經有同一張訂單就用返 Takeout 嗰筆。
+  /// 唔係收據嘅 Play 電郵（例如「訂閱將被取消」）就略過。返回修正咗幾多筆。
   Future<int> repairPlayReceipts() => db.transaction(() async {
     final old = await (db.select(
       db.captures,
@@ -321,9 +322,18 @@ class CaptureService {
         body: c.body,
         occurredAt: c.occurredAt,
       );
+      final rules = parseByRules(sourceKey: c.sourceKey, title: c.title, body: c.body);
+      if (c.amount == null && rules.isPayment == false) {
+        // 唔係收據嘅 Play 電郵（例如「訂閱將被取消」）
+        await (db.update(
+          db.captures,
+        )..where((x) => x.id.equals(c.id))).write(const CapturesCompanion(status: Value(CaptureStatus.dismissed)));
+        fixed++;
+        continue;
+      }
       final raw = playReceiptCapture(original);
       if (identical(raw, original)) continue;
-      final payment = parseByRules(sourceKey: c.sourceKey, title: c.title, body: c.body).payment;
+      final payment = rules.payment;
 
       final twin = raw.externalId == c.externalId
           ? null
