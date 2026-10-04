@@ -281,8 +281,8 @@ void main() {
       expect(parseMinor('12.'), 1200);
       expect(minorToInput(1250), '12.5');
       expect(minorToInput(1205), '12.05');
-      expect(formatMoney(123456), '\$1,234.56');
-      expect(formatMoney(-500), '-\$5.00');
+      expect(formatMoney(123456), 'HK\$1,234.56');
+      expect(formatMoney(-500), '-HK\$5.00');
     });
 
     test('每月起始日', () {

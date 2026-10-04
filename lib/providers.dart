@@ -3,10 +3,14 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'data/database.dart';
+import 'domain/capture/capture_service.dart';
+import 'domain/capture/gemini.dart';
+import 'domain/capture/sources.dart';
 import 'domain/ledger.dart';
 import 'domain/money.dart';
 
@@ -94,6 +98,21 @@ final monthStartDayProvider = Provider<int>((ref) {
   return int.tryParse(v ?? '') ?? 1;
 });
 
+/// 底部導航揀咗邊頁：0 首頁、1 統計、2 預算、3 帳戶。
+class HomeTab extends Notifier<int> {
+  @override
+  int build() => 0;
+  void select(int i) => state = i;
+}
+
+final homeTabProvider = NotifierProvider<HomeTab, int>(HomeTab.new);
+
+/// 儲蓄率目標（%），預設 50。
+final savingsTargetProvider = Provider<int>((ref) {
+  final v = ref.watch(settingsProvider).value?[SettingKeys.savingsTarget];
+  return (int.tryParse(v ?? '') ?? 50).clamp(0, 90);
+});
+
 /// 交易列表同報表而家睇緊邊個月（任何喺嗰期入面嘅日子）。
 class PeriodAnchor extends Notifier<DateTime> {
   @override
@@ -174,6 +193,21 @@ final recentPeriodsProvider = StreamProvider.autoDispose.family<List<PeriodSumma
   return _live(ref, (l) => l.recentPeriods(6, startDay, now: anchor));
 });
 
+/// 統計頁：最近 count 期（週 / 月 / 年）嘅收支，由舊到新。
+final unitSummariesProvider = StreamProvider.autoDispose.family<List<PeriodSummary>, (PeriodUnit, DateTime, int)>((
+  ref,
+  key,
+) {
+  final startDay = ref.watch(monthStartDayProvider);
+  final (unit, anchor, count) = key;
+  return _live(ref, (l) => l.summaries(recentRanges(unit, anchor, startDay, count)));
+});
+
+/// 某日之前（唔包嗰日）嘅淨資產，用嚟計「比上月」。
+final netWorthAtProvider = StreamProvider.autoDispose.family<int, DateTime>(
+  (ref, at) => _live(ref, (l) => l.netWorth(asOf: at)),
+);
+
 final netWorthProvider = Provider<AsyncValue<(int assets, int liabilities)>>((ref) {
   final accounts = ref.watch(accountMapProvider);
   return ref.watch(balancesProvider).whenData((bal) {
@@ -186,3 +220,172 @@ final netWorthProvider = Provider<AsyncValue<(int assets, int liabilities)>>((re
     return (assets, liabilities);
   });
 });
+
+// ───────── 自動記錄 ─────────
+
+const _secure = FlutterSecureStorage();
+const geminiKeyStorageKey = 'gemini_api_key';
+
+/// Gemini API key，加密存喺手機（Android Keystore / iOS Keychain），唔入資料庫同備份。
+class GeminiKey extends AsyncNotifier<String?> {
+  @override
+  Future<String?> build() async {
+    try {
+      return await _secure.read(key: geminiKeyStorageKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> set(String? key) async {
+    final v = key?.trim();
+    if (v == null || v.isEmpty) {
+      await _secure.delete(key: geminiKeyStorageKey);
+    } else {
+      await _secure.write(key: geminiKeyStorageKey, value: v);
+    }
+    state = AsyncData(v == null || v.isEmpty ? null : v);
+  }
+}
+
+final geminiKeyProvider = AsyncNotifierProvider<GeminiKey, String?>(GeminiKey.new);
+
+final captureServiceProvider = Provider<CaptureService>((ref) => CaptureService(ref.watch(ledgerProvider)));
+
+final notificationBridgeProvider = Provider<NotificationBridge>((ref) => const NotificationBridge());
+
+/// 待確認嘅自動捕捉，新到舊。
+final pendingCapturesProvider = StreamProvider<List<Capture>>((ref) {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.captures)
+        ..where((c) => c.status.equalsValue(CaptureStatus.pending))
+        ..orderBy([(c) => OrderingTerm.desc(c.occurredAt)]))
+      .watch();
+});
+
+/// 一次同步嘅結果。
+class SyncReport {
+  SyncReport({this.added = 0, this.autoConfirmed = 0, this.skipped = 0, this.errors = const []});
+  int added;
+  int autoConfirmed;
+
+  /// 已經匯入過或者同其他記錄重複
+  int skipped;
+  List<String> errors;
+}
+
+/// 攞通知隊列同 Gmail 收據，逐個解析。App 開啟、返回前景、或者用戶撳重新整理時行。
+class CaptureSync {
+  CaptureSync(this.ref);
+  final Ref ref;
+  Future<SyncReport>? _running;
+
+  /// Gmail 最少隔幾耐先再攞（手動重新整理唔受限）。
+  static const gmailInterval = Duration(minutes: 15);
+
+  Future<SyncReport> run({bool force = false}) => _running ??= _run(force).whenComplete(() => _running = null);
+
+  Future<SyncReport> _run(bool force) async {
+    final report = SyncReport(errors: []);
+    final db = ref.read(databaseProvider);
+    final service = ref.read(captureServiceProvider);
+    final auto = await db.getSetting(SettingKeys.autoConfirm) == 'true';
+    final gemini = await _gemini();
+
+    final raws = <RawCapture>[...await ref.read(notificationBridgeProvider).drain()];
+
+    final url = await db.getSetting(SettingKeys.gmailScriptUrl);
+    final token = await db.getSetting(SettingKeys.gmailScriptToken);
+    if (url != null && url.isNotEmpty && token != null) {
+      final last = int.tryParse(await db.getSetting(SettingKeys.gmailLastSync) ?? '');
+      final lastAt = last != null ? DateTime.fromMillisecondsSinceEpoch(last) : null;
+      if (force || lastAt == null || DateTime.now().difference(lastAt) > gmailInterval) {
+        final gmail = GmailBridge(url: url, token: token);
+        try {
+          final started = DateTime.now();
+          // 由上次攞到嘅時間再退後一日，避免郵件延遲漏咗；重複嘅會用 id 去重
+          raws.addAll(await gmail.fetch(since: lastAt?.subtract(const Duration(days: 1))));
+          await db.setSetting(SettingKeys.gmailLastSync, '${started.millisecondsSinceEpoch}');
+        } on GmailException catch (e) {
+          report.errors.add(e.message);
+        } finally {
+          gmail.close();
+        }
+      }
+    }
+
+    raws.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+    for (final raw in raws) {
+      try {
+        switch (await service.ingest(raw, gemini: gemini, autoConfirm: auto)) {
+          case IngestOutcome.added || IngestOutcome.needsGemini:
+            report.added++;
+          case IngestOutcome.autoConfirmed:
+            report.autoConfirmed++;
+          default:
+        }
+      } on GeminiException catch (e) {
+        // Gemini 出錯：照樣留低，等用戶自己睇
+        await service.ingest(raw);
+        report.added++;
+        if (!report.errors.contains(e.message)) report.errors.add(e.message);
+      } catch (e) {
+        report.errors.add('$e');
+      }
+    }
+    gemini?.close();
+    return report;
+  }
+
+  Future<GeminiParser?> _gemini() async {
+    final key = await ref.read(geminiKeyProvider.future);
+    if (key == null) return null;
+    final model = await ref.read(databaseProvider).getSetting(SettingKeys.geminiModel);
+    return GeminiParser(apiKey: key, model: (model == null || model.isEmpty) ? defaultGeminiModel : model);
+  }
+
+  /// 用 Gemini 讀八達通 App 交易紀錄截圖，每行放入待確認。重複匯入同一行會略過。
+  Future<SyncReport> importOctopusScreenshots(List<({List<int> bytes, String mimeType})> images) async {
+    final report = SyncReport(errors: []);
+    final gemini = await _gemini();
+    if (gemini == null) {
+      report.errors.add('請先喺「自動記錄」設定輸入 Gemini API key');
+      return report;
+    }
+    final db = ref.read(databaseProvider);
+    final service = ref.read(captureServiceProvider);
+    final auto = await db.getSetting(SettingKeys.autoConfirm) == 'true';
+    final accounts = await (db.select(db.accounts)..where((a) => a.deletedAt.isNull())).get();
+    try {
+      for (final image in images) {
+        final List<OctopusRow> rows;
+        try {
+          rows = await gemini.parseOctopusScreenshot(
+            image.bytes,
+            mimeType: image.mimeType,
+            categories: categoryPaths(accounts),
+          );
+        } on GeminiException catch (e) {
+          if (!report.errors.contains(e.message)) report.errors.add(e.message);
+          continue;
+        }
+        rows.sort((a, b) => a.occurredAt.compareTo(b.occurredAt));
+        for (final (raw, payment) in octopusRowsToCaptures(rows)) {
+          switch (await service.ingestParsed(raw, payment, autoConfirm: auto)) {
+            case IngestOutcome.added:
+              report.added++;
+            case IngestOutcome.autoConfirmed:
+              report.autoConfirmed++;
+            default:
+              report.skipped++;
+          }
+        }
+      }
+    } finally {
+      gemini.close();
+    }
+    return report;
+  }
+}
+
+final captureSyncProvider = Provider<CaptureSync>((ref) => CaptureSync(ref));

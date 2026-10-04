@@ -5,6 +5,7 @@ import '../data/database.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
+import 'theme.dart';
 
 /// 圖示用字串 key 存喺 DB，唔好存 codepoint（release build 會 tree-shake 走）。
 const kIcons = <String, IconData>{
@@ -91,12 +92,14 @@ IconData iconFor(Account a) =>
       _ => a.type == AccountType.liability ? Icons.money_off : Icons.category,
     };
 
-Color colorFor(Account a, BuildContext context) =>
-    a.color != null ? Color(a.color!) : Theme.of(context).colorScheme.primary;
+Color colorFor(Account a, BuildContext context) => a.color != null ? Color(a.color!) : AppColors.muted;
 
-const expenseColor = Color(0xFFE53935);
-const incomeColor = Color(0xFF2E7D32);
+/// 支出用黑字、收入用藍字（跟設計圖）。
+const expenseColor = AppColors.ink;
+const incomeColor = AppColors.blue;
 
+/// 分類：淡色圓角方塊 + 分類名第一個字（餐、交、購…）。
+/// 賬戶：灰色圓角方塊 + 圖示；信用卡用淺橙。
 class AccountAvatar extends StatelessWidget {
   const AccountAvatar(this.account, {super.key, this.radius = 20});
   final Account account;
@@ -104,11 +107,31 @@ class AccountAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = colorFor(account, context);
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: c.withValues(alpha: 0.15),
-      child: Icon(iconFor(account), color: c, size: radius * 1.1),
+    final size = radius * 2;
+    final Color bg, fg;
+    final Widget child;
+    if (isFund(account.type)) {
+      final card = account.subtype == AccountSubtype.creditCard || account.type == AccountType.liability;
+      bg = card ? AppColors.peach : AppColors.chip;
+      fg = card ? AppColors.orange : AppColors.ink;
+      child = Icon(iconFor(account), color: fg, size: radius * 1.05);
+    } else {
+      final c = colorFor(account, context);
+      bg = Color.lerp(Colors.white, c, 0.2)!;
+      fg = Color.lerp(c, Colors.black, 0.3)!;
+      child = Text(
+        account.name.isEmpty ? '?' : account.name.characters.first,
+        style: TextStyle(color: fg, fontSize: radius * 0.9, fontWeight: FontWeight.w700, height: 1),
+      );
+    }
+    return ExcludeSemantics(
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(radius * 0.6)),
+        child: child,
+      ),
     );
   }
 }
@@ -209,9 +232,14 @@ class PeriodSwitcher extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(tooltip: '上個月', icon: const Icon(Icons.chevron_left), onPressed: () => notifier.shift(-1)),
-        GestureDetector(
-          onTap: notifier.reset,
-          child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+        Flexible(
+          child: GestureDetector(
+            onTap: notifier.reset,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+            ),
+          ),
         ),
         IconButton(tooltip: '下個月', icon: const Icon(Icons.chevron_right), onPressed: () => notifier.shift(1)),
       ],
@@ -280,6 +308,7 @@ Future<String?> promptText(
   String initial = '',
   String? hint,
   TextInputType? keyboard,
+  bool obscure = false,
 }) {
   final controller = TextEditingController(text: initial);
   return showDialog<String>(
@@ -290,6 +319,7 @@ Future<String?> promptText(
         controller: controller,
         autofocus: true,
         keyboardType: keyboard,
+        obscureText: obscure,
         decoration: InputDecoration(hintText: hint),
         onSubmitted: (v) => Navigator.pop(c, v),
       ),
