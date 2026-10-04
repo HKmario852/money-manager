@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../data/database.dart';
 import '../domain/capture/capture_service.dart';
 import '../domain/capture/gemini.dart';
 import '../domain/capture/sources.dart';
+import '../domain/capture/takeout.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
@@ -525,6 +527,28 @@ class _AutoCaptureSettingsScreenState extends ConsumerState<AutoCaptureSettingsS
           ),
           const SizedBox(height: 6),
           SectionCard(
+            title: 'Google Takeout（Play 購買記錄）',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  '1. 電腦開 takeout.google.com → 取消全選 → 只剔「Google Play 商店」\n'
+                  '2. 傳送方式揀「新增至雲端硬碟」，可以揀每 2 個月自動匯出\n'
+                  '3. 匯出好之後撳下面個掣，喺 Google Drive 揀個 zip\n'
+                  '已經記咗或者匯入過嘅會自動略過。',
+                  style: TextStyle(fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => importTakeout(context, ref),
+                  icon: const Icon(Icons.upload_file, size: 18),
+                  label: const Text('匯入 Takeout'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          SectionCard(
             title: 'Gemini 解析',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -732,6 +756,60 @@ Future<void> importOctopusScreenshots(BuildContext context, WidgetRef ref, {bool
   ];
   showError(context, msg.isEmpty ? '截圖入面搵唔到交易' : msg.join('\n'));
   if (openInbox && report.added > 0) {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen()));
+  }
+}
+
+/// 揀 Google Takeout zip（或者入面嘅 Play JSON），將 Play 購買放入待確認。
+Future<void> importTakeout(BuildContext context, WidgetRef ref) async {
+  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip', 'json']);
+  final path = picked.firstOrNull?.path;
+  if (path == null || !context.mounted) return;
+  final List<PlayPurchase> purchases;
+  try {
+    purchases = await readTakeout(path);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+    return;
+  }
+  if (!context.mounted) return;
+  if (purchases.isEmpty) {
+    showError(context, '入面冇要俾錢嘅 Google Play 購買');
+    return;
+  }
+
+  // Takeout 包埋好多年前嘅記錄：預設只入開始用 app 之後嘅
+  final since = await ref.read(captureSyncProvider).appStartedAt();
+  final older = since == null ? 0 : purchases.where((p) => p.at.isBefore(since)).length;
+  DateTime? cutoff;
+  if (older > 0 && context.mounted) {
+    final all = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('搵到 ${purchases.length} 筆 Play 購買'),
+        content: Text('其中 $older 筆係 ${formatDate(since!, withYear: true)} 開始用 app 之前。要唔要都匯入？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('全部匯入')),
+          FilledButton(onPressed: () => Navigator.pop(c, false), child: const Text('只入之後')),
+        ],
+      ),
+    );
+    if (all == null) return;
+    if (!all) cutoff = since;
+  }
+  if (!context.mounted) return;
+
+  final items = takeoutToCaptures(purchases, since: cutoff);
+  final report = await ref.read(captureSyncProvider).importTakeout(items);
+  if (!context.mounted) return;
+  final msg = [
+    if (report.added > 0) '新增 ${report.added} 筆待確認',
+    if (report.autoConfirmed > 0) '自動入帳 ${report.autoConfirmed} 筆',
+    if (report.skipped > 0) '${report.skipped} 筆之前匯入過或者已經記咗，略過',
+  ];
+  showError(context, msg.isEmpty ? '冇新嘅購買' : msg.join('\n'));
+  if (report.added > 0) {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen()));
   }
 }
