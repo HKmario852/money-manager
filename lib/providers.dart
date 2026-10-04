@@ -292,6 +292,11 @@ class CaptureSync {
     final service = ref.read(captureServiceProvider);
     final auto = await db.getSetting(SettingKeys.autoConfirm) == 'true';
     final gemini = await _gemini();
+    try {
+      await service.repairPlayReceipts();
+    } catch (e) {
+      report.errors.add('$e');
+    }
 
     final raws = <RawCapture>[...await ref.read(notificationBridgeProvider).drain()];
 
