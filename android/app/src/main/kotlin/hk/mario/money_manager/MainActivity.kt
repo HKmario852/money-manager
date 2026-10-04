@@ -66,6 +66,14 @@ class MainActivity : FlutterFragmentActivity() {
                 }
             }
 
+        // App 課金：電話上裝咗嘅 App 圖示
+        MethodChannel(messenger, "hk.mario.money_manager/apps")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "icons") return@setMethodCallHandler result.notImplemented()
+                @Suppress("UNCHECKED_CAST")
+                AppIcons.find(this, (call.arguments as? List<String>) ?: emptyList(), result)
+            }
+
         // App 內更新：打開系統安裝畫面
         MethodChannel(messenger, "hk.mario.money_manager/update")
             .setMethodCallHandler { call, result ->

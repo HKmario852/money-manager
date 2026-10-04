@@ -74,6 +74,11 @@
         <package android:name="com.octopuscards.nfc_reader" />
         <package android:name="com.tencent.mm" />
         <package android:name="com.hsbc.hsbchkmobilebanking" />
+        <!-- App 課金：用裝咗嘅遊戲 / App 圖示（只睇有桌面圖示嘅 App） -->
+        <intent>
+            <action android:name="android.intent.action.MAIN"/>
+            <category android:name="android.intent.category.LAUNCHER"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
