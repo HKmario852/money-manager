@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:money_manager/data/database.dart';
@@ -59,6 +61,31 @@ void main() {
     expect(p.categoryHint, '餐飲 › 午餐');
     expect(decodeGeminiAnswer('{"is_payment":false}'), isNull);
     expect(decodeGeminiAnswer('not json'), isNull);
+  });
+
+  test('Gemini 錯誤原因', () {
+    String err(int code, String message, [String? reason]) => jsonEncode({
+      'error': {
+        'code': code,
+        'message': message,
+        'details': [
+          if (reason != null) {'reason': reason},
+        ],
+      },
+    });
+    expect(
+      geminiErrorMessage(400, err(400, 'API key not valid. Please pass a valid API key.', 'API_KEY_INVALID'), 'm'),
+      contains('key 唔啱'),
+    );
+    expect(geminiErrorMessage(400, err(400, 'User location is not supported for the API use.'), 'm'), contains('地區'));
+    expect(
+      geminiErrorMessage(403, err(403, 'Generative Language API has not been used', 'SERVICE_DISABLED'), 'm'),
+      contains('未開'),
+    );
+    expect(geminiErrorMessage(403, err(403, 'blocked', 'API_KEY_SERVICE_BLOCKED'), 'm'), contains('限制'));
+    expect(geminiErrorMessage(400, err(400, 'Something else'), 'm'), 'Gemini 拒絕咗個請求（400）：Something else');
+    expect(geminiErrorMessage(404, 'not json', 'gemini-x'), contains('gemini-x'));
+    expect(geminiErrorMessage(500, '', 'm'), 'Gemini 出錯（500）');
   });
 
   test('八達通截圖 JSON 轉換', () {

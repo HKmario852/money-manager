@@ -139,12 +139,7 @@ If the image is not an Octopus transaction list, set is_octopus_history to false
       final res = await req.close().timeout(const Duration(seconds: 60));
       final text = await res.transform(utf8.decoder).join();
       if (res.statusCode != 200) {
-        throw GeminiException(switch (res.statusCode) {
-          400 || 403 => 'Gemini API key 唔啱或者冇權限',
-          404 => '搵唔到 Gemini 模型「$model」，請喺設定改模型名',
-          429 => 'Gemini 用量到咗上限，遲啲再試',
-          _ => 'Gemini 出錯（${res.statusCode}）',
-        });
+        throw GeminiException(geminiErrorMessage(res.statusCode, text, model));
       }
       json = jsonDecode(text) as Map<String, dynamic>;
     } on GeminiException {
@@ -233,4 +228,37 @@ List<OctopusRow>? decodeOctopusRows(String raw) {
     );
   }
   return out;
+}
+
+/// 將 Gemini 嘅錯誤回應轉做用戶睇得明嘅原因（400/403 有好多種，唔一定係 key 錯）。
+String geminiErrorMessage(int status, String body, String model) {
+  String message = '';
+  final reasons = <String>{};
+  try {
+    final error = (jsonDecode(body) as Map<String, dynamic>)['error'] as Map<String, dynamic>;
+    message = error['message'] as String? ?? '';
+    for (final d in (error['details'] as List? ?? const []).whereType<Map<String, dynamic>>()) {
+      if (d['reason'] is String) reasons.add(d['reason'] as String);
+    }
+  } catch (_) {}
+  final lower = message.toLowerCase();
+  if (reasons.contains('API_KEY_INVALID') || lower.contains('api key not valid')) {
+    return 'Gemini API key 唔啱，請喺 Google AI Studio 重新複製成條 key';
+  }
+  if (lower.contains('location is not supported') || lower.contains('not available in your country')) {
+    return 'Google 話你而家嘅地區用唔到 Gemini API（香港唔喺支援地區）';
+  }
+  if (reasons.contains('SERVICE_DISABLED')) {
+    return '呢條 key 嘅 Google Cloud 項目未開 Generative Language API';
+  }
+  if (reasons.any((r) => r.startsWith('API_KEY_') && r.endsWith('_BLOCKED'))) {
+    return '呢條 key 設咗限制，唔准用 Gemini API，請喺 Google Cloud 改 key 嘅限制';
+  }
+  final detail = message.isEmpty ? '' : '：${message.length > 160 ? '${message.substring(0, 160)}…' : message}';
+  return switch (status) {
+    404 => '搵唔到 Gemini 模型「$model」，請喺設定改模型名',
+    429 => 'Gemini 用量到咗上限，遲啲再試',
+    400 || 403 => 'Gemini 拒絕咗個請求（$status）$detail',
+    _ => 'Gemini 出錯（$status）$detail',
+  };
 }
