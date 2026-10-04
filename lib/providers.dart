@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'data/database.dart';
 import 'domain/capture/capture_service.dart';
 import 'domain/capture/gemini.dart';
+import 'domain/capture/parser.dart';
 import 'domain/capture/sources.dart';
 import 'domain/ledger.dart';
 import 'domain/money.dart';
@@ -383,6 +384,31 @@ class CaptureSync {
       }
     } finally {
       gemini.close();
+    }
+    return report;
+  }
+
+  /// 開始用 app 嘅時間（最早建立嘅賬戶）。
+  Future<DateTime?> appStartedAt() async {
+    final db = ref.read(databaseProvider);
+    final first = db.accounts.createdAt.min();
+    return (await (db.selectOnly(db.accounts)..addColumns([first])).getSingle()).read(first);
+  }
+
+  /// Google Takeout 嘅 Play 購買記錄：格式固定，唔使 Gemini。
+  Future<SyncReport> importTakeout(List<(RawCapture, ParsedPayment)> items) async {
+    final report = SyncReport(errors: []);
+    final service = ref.read(captureServiceProvider);
+    final auto = await ref.read(databaseProvider).getSetting(SettingKeys.autoConfirm) == 'true';
+    for (final (raw, payment) in items) {
+      switch (await service.ingestParsed(raw, payment, parsedBy: ParsedBy.rule, autoConfirm: auto)) {
+        case IngestOutcome.added:
+          report.added++;
+        case IngestOutcome.autoConfirmed:
+          report.autoConfirmed++;
+        default:
+          report.skipped++;
+      }
     }
     return report;
   }
