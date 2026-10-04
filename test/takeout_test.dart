@@ -177,5 +177,36 @@ void main() {
       expect(all.last.$2.categoryHint, '娛樂 › 訂閱');
       expect(await service.ingestParsed(all.last.$1, all.last.$2, parsedBy: ParsedBy.rule), IngestOutcome.added);
     });
+    test('揀一次賬戶，同一個付款方法嘅都一齊用', () async {
+      final alipay = await Ledger(db)
+          .createFundAccount(name: '支付寶', type: AccountType.asset, subtype: AccountSubtype.ewallet);
+      PlayPurchase buy(String id, String method, int day) => PlayPurchase(
+        id: id,
+        title: '月卡 (明日方舟)',
+        amount: 3000,
+        currency: 'HKD',
+        at: DateTime(2026, 9, day),
+        paymentMethod: method,
+      );
+      final items = takeoutToCaptures([buy('a', 'AlipayHK', 1), buy('b', 'AlipayHK', 2), buy('c', 'Mastercard', 3)]);
+      for (final (raw, p) in items) {
+        expect(await service.ingestParsed(raw, p, parsedBy: ParsedBy.rule), IngestOutcome.added);
+      }
+      final pending = await db.select(db.captures).get();
+      final first = pending.firstWhere((c) => c.externalId == 'takeout:a');
+      expect(await service.setFund(first, alipay), 1);
+      final after = {for (final c in await db.select(db.captures).get()) c.externalId: c.fundAccountId};
+      expect(after['takeout:a'], alipay);
+      expect(after['takeout:b'], alipay);
+      expect(after['takeout:c'], isNot(alipay));
+
+      // 下次匯入記得
+      final (raw, p) = takeoutToCaptures([buy('d', 'AlipayHK', 4)]).single;
+      await service.ingestParsed(raw, p, parsedBy: ParsedBy.rule);
+      expect(
+        (await (db.select(db.captures)..where((c) => c.externalId.equals('takeout:d'))).getSingle()).fundAccountId,
+        alipay,
+      );
+    });
   });
 }
