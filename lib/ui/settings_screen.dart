@@ -74,6 +74,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           SwitchListTile(
+            secondary: const Icon(Icons.receipt_long_outlined),
+            title: const Text('只記支出'),
+            subtitle: const Text('收埋淨資產同帳戶結餘，帳戶淨係用嚟分付款方法'),
+            value: settings[SettingKeys.spendingOnly] == 'true',
+            onChanged: (v) => db.setSetting(SettingKeys.spendingOnly, '$v'),
+          ),
+          SwitchListTile(
             secondary: const Icon(Icons.fingerprint),
             title: const Text('私隱鎖'),
             subtitle: const Text('開 App 要用指紋 / Face ID 解鎖'),
