@@ -3639,6 +3639,1138 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   }
 }
 
+class $CapturesTable extends Captures with TableInfo<$CapturesTable, Capture> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CapturesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<EntrySource, String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<EntrySource>($CapturesTable.$convertersource);
+  static const VerificationMeta _sourceKeyMeta = const VerificationMeta('sourceKey');
+  @override
+  late final GeneratedColumn<String> sourceKey = GeneratedColumn<String>(
+    'source_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceLabelMeta = const VerificationMeta('sourceLabel');
+  @override
+  late final GeneratedColumn<String> sourceLabel = GeneratedColumn<String>(
+    'source_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _externalIdMeta = const VerificationMeta('externalId');
+  @override
+  late final GeneratedColumn<String> externalId = GeneratedColumn<String>(
+    'external_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
+  @override
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+    'body',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta('occurredAt');
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<int> amount = GeneratedColumn<int>(
+    'amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currencyMeta = const VerificationMeta('currency');
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _merchantMeta = const VerificationMeta('merchant');
+  @override
+  late final GeneratedColumn<String> merchant = GeneratedColumn<String>(
+    'merchant',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isIncomeMeta = const VerificationMeta('isIncome');
+  @override
+  late final GeneratedColumn<bool> isIncome = GeneratedColumn<bool>(
+    'is_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_income" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isTransferMeta = const VerificationMeta('isTransfer');
+  @override
+  late final GeneratedColumn<bool> isTransfer = GeneratedColumn<bool>(
+    'is_transfer',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_transfer" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta('categoryId');
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES accounts (id)'),
+  );
+  static const VerificationMeta _fundAccountIdMeta = const VerificationMeta('fundAccountId');
+  @override
+  late final GeneratedColumn<String> fundAccountId = GeneratedColumn<String>(
+    'fund_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES accounts (id)'),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<ParsedBy, String> parsedBy = GeneratedColumn<String>(
+    'parsed_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  ).withConverter<ParsedBy>($CapturesTable.$converterparsedBy);
+  @override
+  late final GeneratedColumnWithTypeConverter<CaptureStatus, String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  ).withConverter<CaptureStatus>($CapturesTable.$converterstatus);
+  static const VerificationMeta _entryIdMeta = const VerificationMeta('entryId');
+  @override
+  late final GeneratedColumn<String> entryId = GeneratedColumn<String>(
+    'entry_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES journal_entries (id) ON DELETE SET NULL'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    source,
+    sourceKey,
+    sourceLabel,
+    externalId,
+    title,
+    body,
+    occurredAt,
+    amount,
+    currency,
+    merchant,
+    isIncome,
+    isTransfer,
+    categoryId,
+    fundAccountId,
+    parsedBy,
+    status,
+    entryId,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'captures';
+  @override
+  VerificationContext validateIntegrity(Insertable<Capture> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('source_key')) {
+      context.handle(_sourceKeyMeta, sourceKey.isAcceptableOrUnknown(data['source_key']!, _sourceKeyMeta));
+    } else if (isInserting) {
+      context.missing(_sourceKeyMeta);
+    }
+    if (data.containsKey('source_label')) {
+      context.handle(_sourceLabelMeta, sourceLabel.isAcceptableOrUnknown(data['source_label']!, _sourceLabelMeta));
+    }
+    if (data.containsKey('external_id')) {
+      context.handle(_externalIdMeta, externalId.isAcceptableOrUnknown(data['external_id']!, _externalIdMeta));
+    } else if (isInserting) {
+      context.missing(_externalIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    }
+    if (data.containsKey('body')) {
+      context.handle(_bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
+    } else if (isInserting) {
+      context.missing(_bodyMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(_occurredAtMeta, occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta));
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta, amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    }
+    if (data.containsKey('currency')) {
+      context.handle(_currencyMeta, currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta));
+    }
+    if (data.containsKey('merchant')) {
+      context.handle(_merchantMeta, merchant.isAcceptableOrUnknown(data['merchant']!, _merchantMeta));
+    }
+    if (data.containsKey('is_income')) {
+      context.handle(_isIncomeMeta, isIncome.isAcceptableOrUnknown(data['is_income']!, _isIncomeMeta));
+    }
+    if (data.containsKey('is_transfer')) {
+      context.handle(_isTransferMeta, isTransfer.isAcceptableOrUnknown(data['is_transfer']!, _isTransferMeta));
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(_categoryIdMeta, categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta));
+    }
+    if (data.containsKey('fund_account_id')) {
+      context.handle(
+        _fundAccountIdMeta,
+        fundAccountId.isAcceptableOrUnknown(data['fund_account_id']!, _fundAccountIdMeta),
+      );
+    }
+    if (data.containsKey('entry_id')) {
+      context.handle(_entryIdMeta, entryId.isAcceptableOrUnknown(data['entry_id']!, _entryIdMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta, createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Capture map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Capture(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      source: $CapturesTable.$convertersource.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source'])!,
+      ),
+      sourceKey: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_key'])!,
+      sourceLabel: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}source_label']),
+      externalId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}external_id'])!,
+      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title']),
+      body: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}body'])!,
+      occurredAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}occurred_at'])!,
+      amount: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}amount']),
+      currency: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}currency']),
+      merchant: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}merchant']),
+      isIncome: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_income'])!,
+      isTransfer: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_transfer'])!,
+      categoryId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}category_id']),
+      fundAccountId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}fund_account_id']),
+      parsedBy: $CapturesTable.$converterparsedBy.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}parsed_by'])!,
+      ),
+      status: $CapturesTable.$converterstatus.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}status'])!,
+      ),
+      entryId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}entry_id']),
+      createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $CapturesTable createAlias(String alias) {
+    return $CapturesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<EntrySource, String, String> $convertersource = const EnumNameConverter<EntrySource>(
+    EntrySource.values,
+  );
+  static JsonTypeConverter2<ParsedBy, String, String> $converterparsedBy = const EnumNameConverter<ParsedBy>(
+    ParsedBy.values,
+  );
+  static JsonTypeConverter2<CaptureStatus, String, String> $converterstatus = const EnumNameConverter<CaptureStatus>(
+    CaptureStatus.values,
+  );
+}
+
+class Capture extends DataClass implements Insertable<Capture> {
+  final String id;
+
+  /// notification / email
+  final EntrySource source;
+
+  /// 來源 App 套件名或者寄件人，例如 hk.alipay.wallet、googleplay-noreply@google.com
+  final String sourceKey;
+
+  /// 顯示用嘅來源名，例如 AlipayHK、Google Play
+  final String? sourceLabel;
+
+  /// 去重用：通知 key + 時間，或者 Gmail message id
+  final String externalId;
+  final String? title;
+  final String body;
+  final DateTime occurredAt;
+
+  /// 解析結果（可能係 null = 解析唔到）
+  final int? amount;
+  final String? currency;
+  final String? merchant;
+  final bool isIncome;
+
+  /// 增值（例如現金轉入八達通）：[categoryId] 係轉出嘅資金賬戶，[fundAccountId] 係轉入嘅。
+  final bool isTransfer;
+  final String? categoryId;
+  final String? fundAccountId;
+  final ParsedBy parsedBy;
+  final CaptureStatus status;
+  final String? entryId;
+  final DateTime createdAt;
+  const Capture({
+    required this.id,
+    required this.source,
+    required this.sourceKey,
+    this.sourceLabel,
+    required this.externalId,
+    this.title,
+    required this.body,
+    required this.occurredAt,
+    this.amount,
+    this.currency,
+    this.merchant,
+    required this.isIncome,
+    required this.isTransfer,
+    this.categoryId,
+    this.fundAccountId,
+    required this.parsedBy,
+    required this.status,
+    this.entryId,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    {
+      map['source'] = Variable<String>($CapturesTable.$convertersource.toSql(source));
+    }
+    map['source_key'] = Variable<String>(sourceKey);
+    if (!nullToAbsent || sourceLabel != null) {
+      map['source_label'] = Variable<String>(sourceLabel);
+    }
+    map['external_id'] = Variable<String>(externalId);
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
+    }
+    map['body'] = Variable<String>(body);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    if (!nullToAbsent || amount != null) {
+      map['amount'] = Variable<int>(amount);
+    }
+    if (!nullToAbsent || currency != null) {
+      map['currency'] = Variable<String>(currency);
+    }
+    if (!nullToAbsent || merchant != null) {
+      map['merchant'] = Variable<String>(merchant);
+    }
+    map['is_income'] = Variable<bool>(isIncome);
+    map['is_transfer'] = Variable<bool>(isTransfer);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || fundAccountId != null) {
+      map['fund_account_id'] = Variable<String>(fundAccountId);
+    }
+    {
+      map['parsed_by'] = Variable<String>($CapturesTable.$converterparsedBy.toSql(parsedBy));
+    }
+    {
+      map['status'] = Variable<String>($CapturesTable.$converterstatus.toSql(status));
+    }
+    if (!nullToAbsent || entryId != null) {
+      map['entry_id'] = Variable<String>(entryId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CapturesCompanion toCompanion(bool nullToAbsent) {
+    return CapturesCompanion(
+      id: Value(id),
+      source: Value(source),
+      sourceKey: Value(sourceKey),
+      sourceLabel: sourceLabel == null && nullToAbsent ? const Value.absent() : Value(sourceLabel),
+      externalId: Value(externalId),
+      title: title == null && nullToAbsent ? const Value.absent() : Value(title),
+      body: Value(body),
+      occurredAt: Value(occurredAt),
+      amount: amount == null && nullToAbsent ? const Value.absent() : Value(amount),
+      currency: currency == null && nullToAbsent ? const Value.absent() : Value(currency),
+      merchant: merchant == null && nullToAbsent ? const Value.absent() : Value(merchant),
+      isIncome: Value(isIncome),
+      isTransfer: Value(isTransfer),
+      categoryId: categoryId == null && nullToAbsent ? const Value.absent() : Value(categoryId),
+      fundAccountId: fundAccountId == null && nullToAbsent ? const Value.absent() : Value(fundAccountId),
+      parsedBy: Value(parsedBy),
+      status: Value(status),
+      entryId: entryId == null && nullToAbsent ? const Value.absent() : Value(entryId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Capture.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Capture(
+      id: serializer.fromJson<String>(json['id']),
+      source: $CapturesTable.$convertersource.fromJson(serializer.fromJson<String>(json['source'])),
+      sourceKey: serializer.fromJson<String>(json['sourceKey']),
+      sourceLabel: serializer.fromJson<String?>(json['sourceLabel']),
+      externalId: serializer.fromJson<String>(json['externalId']),
+      title: serializer.fromJson<String?>(json['title']),
+      body: serializer.fromJson<String>(json['body']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      amount: serializer.fromJson<int?>(json['amount']),
+      currency: serializer.fromJson<String?>(json['currency']),
+      merchant: serializer.fromJson<String?>(json['merchant']),
+      isIncome: serializer.fromJson<bool>(json['isIncome']),
+      isTransfer: serializer.fromJson<bool>(json['isTransfer']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      fundAccountId: serializer.fromJson<String?>(json['fundAccountId']),
+      parsedBy: $CapturesTable.$converterparsedBy.fromJson(serializer.fromJson<String>(json['parsedBy'])),
+      status: $CapturesTable.$converterstatus.fromJson(serializer.fromJson<String>(json['status'])),
+      entryId: serializer.fromJson<String?>(json['entryId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'source': serializer.toJson<String>($CapturesTable.$convertersource.toJson(source)),
+      'sourceKey': serializer.toJson<String>(sourceKey),
+      'sourceLabel': serializer.toJson<String?>(sourceLabel),
+      'externalId': serializer.toJson<String>(externalId),
+      'title': serializer.toJson<String?>(title),
+      'body': serializer.toJson<String>(body),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'amount': serializer.toJson<int?>(amount),
+      'currency': serializer.toJson<String?>(currency),
+      'merchant': serializer.toJson<String?>(merchant),
+      'isIncome': serializer.toJson<bool>(isIncome),
+      'isTransfer': serializer.toJson<bool>(isTransfer),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'fundAccountId': serializer.toJson<String?>(fundAccountId),
+      'parsedBy': serializer.toJson<String>($CapturesTable.$converterparsedBy.toJson(parsedBy)),
+      'status': serializer.toJson<String>($CapturesTable.$converterstatus.toJson(status)),
+      'entryId': serializer.toJson<String?>(entryId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Capture copyWith({
+    String? id,
+    EntrySource? source,
+    String? sourceKey,
+    Value<String?> sourceLabel = const Value.absent(),
+    String? externalId,
+    Value<String?> title = const Value.absent(),
+    String? body,
+    DateTime? occurredAt,
+    Value<int?> amount = const Value.absent(),
+    Value<String?> currency = const Value.absent(),
+    Value<String?> merchant = const Value.absent(),
+    bool? isIncome,
+    bool? isTransfer,
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> fundAccountId = const Value.absent(),
+    ParsedBy? parsedBy,
+    CaptureStatus? status,
+    Value<String?> entryId = const Value.absent(),
+    DateTime? createdAt,
+  }) => Capture(
+    id: id ?? this.id,
+    source: source ?? this.source,
+    sourceKey: sourceKey ?? this.sourceKey,
+    sourceLabel: sourceLabel.present ? sourceLabel.value : this.sourceLabel,
+    externalId: externalId ?? this.externalId,
+    title: title.present ? title.value : this.title,
+    body: body ?? this.body,
+    occurredAt: occurredAt ?? this.occurredAt,
+    amount: amount.present ? amount.value : this.amount,
+    currency: currency.present ? currency.value : this.currency,
+    merchant: merchant.present ? merchant.value : this.merchant,
+    isIncome: isIncome ?? this.isIncome,
+    isTransfer: isTransfer ?? this.isTransfer,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    fundAccountId: fundAccountId.present ? fundAccountId.value : this.fundAccountId,
+    parsedBy: parsedBy ?? this.parsedBy,
+    status: status ?? this.status,
+    entryId: entryId.present ? entryId.value : this.entryId,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Capture copyWithCompanion(CapturesCompanion data) {
+    return Capture(
+      id: data.id.present ? data.id.value : this.id,
+      source: data.source.present ? data.source.value : this.source,
+      sourceKey: data.sourceKey.present ? data.sourceKey.value : this.sourceKey,
+      sourceLabel: data.sourceLabel.present ? data.sourceLabel.value : this.sourceLabel,
+      externalId: data.externalId.present ? data.externalId.value : this.externalId,
+      title: data.title.present ? data.title.value : this.title,
+      body: data.body.present ? data.body.value : this.body,
+      occurredAt: data.occurredAt.present ? data.occurredAt.value : this.occurredAt,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      merchant: data.merchant.present ? data.merchant.value : this.merchant,
+      isIncome: data.isIncome.present ? data.isIncome.value : this.isIncome,
+      isTransfer: data.isTransfer.present ? data.isTransfer.value : this.isTransfer,
+      categoryId: data.categoryId.present ? data.categoryId.value : this.categoryId,
+      fundAccountId: data.fundAccountId.present ? data.fundAccountId.value : this.fundAccountId,
+      parsedBy: data.parsedBy.present ? data.parsedBy.value : this.parsedBy,
+      status: data.status.present ? data.status.value : this.status,
+      entryId: data.entryId.present ? data.entryId.value : this.entryId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Capture(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('sourceKey: $sourceKey, ')
+          ..write('sourceLabel: $sourceLabel, ')
+          ..write('externalId: $externalId, ')
+          ..write('title: $title, ')
+          ..write('body: $body, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('amount: $amount, ')
+          ..write('currency: $currency, ')
+          ..write('merchant: $merchant, ')
+          ..write('isIncome: $isIncome, ')
+          ..write('isTransfer: $isTransfer, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fundAccountId: $fundAccountId, ')
+          ..write('parsedBy: $parsedBy, ')
+          ..write('status: $status, ')
+          ..write('entryId: $entryId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    source,
+    sourceKey,
+    sourceLabel,
+    externalId,
+    title,
+    body,
+    occurredAt,
+    amount,
+    currency,
+    merchant,
+    isIncome,
+    isTransfer,
+    categoryId,
+    fundAccountId,
+    parsedBy,
+    status,
+    entryId,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Capture &&
+          other.id == this.id &&
+          other.source == this.source &&
+          other.sourceKey == this.sourceKey &&
+          other.sourceLabel == this.sourceLabel &&
+          other.externalId == this.externalId &&
+          other.title == this.title &&
+          other.body == this.body &&
+          other.occurredAt == this.occurredAt &&
+          other.amount == this.amount &&
+          other.currency == this.currency &&
+          other.merchant == this.merchant &&
+          other.isIncome == this.isIncome &&
+          other.isTransfer == this.isTransfer &&
+          other.categoryId == this.categoryId &&
+          other.fundAccountId == this.fundAccountId &&
+          other.parsedBy == this.parsedBy &&
+          other.status == this.status &&
+          other.entryId == this.entryId &&
+          other.createdAt == this.createdAt);
+}
+
+class CapturesCompanion extends UpdateCompanion<Capture> {
+  final Value<String> id;
+  final Value<EntrySource> source;
+  final Value<String> sourceKey;
+  final Value<String?> sourceLabel;
+  final Value<String> externalId;
+  final Value<String?> title;
+  final Value<String> body;
+  final Value<DateTime> occurredAt;
+  final Value<int?> amount;
+  final Value<String?> currency;
+  final Value<String?> merchant;
+  final Value<bool> isIncome;
+  final Value<bool> isTransfer;
+  final Value<String?> categoryId;
+  final Value<String?> fundAccountId;
+  final Value<ParsedBy> parsedBy;
+  final Value<CaptureStatus> status;
+  final Value<String?> entryId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CapturesCompanion({
+    this.id = const Value.absent(),
+    this.source = const Value.absent(),
+    this.sourceKey = const Value.absent(),
+    this.sourceLabel = const Value.absent(),
+    this.externalId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.body = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.merchant = const Value.absent(),
+    this.isIncome = const Value.absent(),
+    this.isTransfer = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.fundAccountId = const Value.absent(),
+    this.parsedBy = const Value.absent(),
+    this.status = const Value.absent(),
+    this.entryId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CapturesCompanion.insert({
+    this.id = const Value.absent(),
+    required EntrySource source,
+    required String sourceKey,
+    this.sourceLabel = const Value.absent(),
+    required String externalId,
+    this.title = const Value.absent(),
+    required String body,
+    required DateTime occurredAt,
+    this.amount = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.merchant = const Value.absent(),
+    this.isIncome = const Value.absent(),
+    this.isTransfer = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.fundAccountId = const Value.absent(),
+    this.parsedBy = const Value.absent(),
+    this.status = const Value.absent(),
+    this.entryId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : source = Value(source),
+       sourceKey = Value(sourceKey),
+       externalId = Value(externalId),
+       body = Value(body),
+       occurredAt = Value(occurredAt);
+  static Insertable<Capture> custom({
+    Expression<String>? id,
+    Expression<String>? source,
+    Expression<String>? sourceKey,
+    Expression<String>? sourceLabel,
+    Expression<String>? externalId,
+    Expression<String>? title,
+    Expression<String>? body,
+    Expression<DateTime>? occurredAt,
+    Expression<int>? amount,
+    Expression<String>? currency,
+    Expression<String>? merchant,
+    Expression<bool>? isIncome,
+    Expression<bool>? isTransfer,
+    Expression<String>? categoryId,
+    Expression<String>? fundAccountId,
+    Expression<String>? parsedBy,
+    Expression<String>? status,
+    Expression<String>? entryId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (source != null) 'source': source,
+      if (sourceKey != null) 'source_key': sourceKey,
+      if (sourceLabel != null) 'source_label': sourceLabel,
+      if (externalId != null) 'external_id': externalId,
+      if (title != null) 'title': title,
+      if (body != null) 'body': body,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (amount != null) 'amount': amount,
+      if (currency != null) 'currency': currency,
+      if (merchant != null) 'merchant': merchant,
+      if (isIncome != null) 'is_income': isIncome,
+      if (isTransfer != null) 'is_transfer': isTransfer,
+      if (categoryId != null) 'category_id': categoryId,
+      if (fundAccountId != null) 'fund_account_id': fundAccountId,
+      if (parsedBy != null) 'parsed_by': parsedBy,
+      if (status != null) 'status': status,
+      if (entryId != null) 'entry_id': entryId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CapturesCompanion copyWith({
+    Value<String>? id,
+    Value<EntrySource>? source,
+    Value<String>? sourceKey,
+    Value<String?>? sourceLabel,
+    Value<String>? externalId,
+    Value<String?>? title,
+    Value<String>? body,
+    Value<DateTime>? occurredAt,
+    Value<int?>? amount,
+    Value<String?>? currency,
+    Value<String?>? merchant,
+    Value<bool>? isIncome,
+    Value<bool>? isTransfer,
+    Value<String?>? categoryId,
+    Value<String?>? fundAccountId,
+    Value<ParsedBy>? parsedBy,
+    Value<CaptureStatus>? status,
+    Value<String?>? entryId,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CapturesCompanion(
+      id: id ?? this.id,
+      source: source ?? this.source,
+      sourceKey: sourceKey ?? this.sourceKey,
+      sourceLabel: sourceLabel ?? this.sourceLabel,
+      externalId: externalId ?? this.externalId,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      occurredAt: occurredAt ?? this.occurredAt,
+      amount: amount ?? this.amount,
+      currency: currency ?? this.currency,
+      merchant: merchant ?? this.merchant,
+      isIncome: isIncome ?? this.isIncome,
+      isTransfer: isTransfer ?? this.isTransfer,
+      categoryId: categoryId ?? this.categoryId,
+      fundAccountId: fundAccountId ?? this.fundAccountId,
+      parsedBy: parsedBy ?? this.parsedBy,
+      status: status ?? this.status,
+      entryId: entryId ?? this.entryId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>($CapturesTable.$convertersource.toSql(source.value));
+    }
+    if (sourceKey.present) {
+      map['source_key'] = Variable<String>(sourceKey.value);
+    }
+    if (sourceLabel.present) {
+      map['source_label'] = Variable<String>(sourceLabel.value);
+    }
+    if (externalId.present) {
+      map['external_id'] = Variable<String>(externalId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<int>(amount.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (merchant.present) {
+      map['merchant'] = Variable<String>(merchant.value);
+    }
+    if (isIncome.present) {
+      map['is_income'] = Variable<bool>(isIncome.value);
+    }
+    if (isTransfer.present) {
+      map['is_transfer'] = Variable<bool>(isTransfer.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (fundAccountId.present) {
+      map['fund_account_id'] = Variable<String>(fundAccountId.value);
+    }
+    if (parsedBy.present) {
+      map['parsed_by'] = Variable<String>($CapturesTable.$converterparsedBy.toSql(parsedBy.value));
+    }
+    if (status.present) {
+      map['status'] = Variable<String>($CapturesTable.$converterstatus.toSql(status.value));
+    }
+    if (entryId.present) {
+      map['entry_id'] = Variable<String>(entryId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CapturesCompanion(')
+          ..write('id: $id, ')
+          ..write('source: $source, ')
+          ..write('sourceKey: $sourceKey, ')
+          ..write('sourceLabel: $sourceLabel, ')
+          ..write('externalId: $externalId, ')
+          ..write('title: $title, ')
+          ..write('body: $body, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('amount: $amount, ')
+          ..write('currency: $currency, ')
+          ..write('merchant: $merchant, ')
+          ..write('isIncome: $isIncome, ')
+          ..write('isTransfer: $isTransfer, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fundAccountId: $fundAccountId, ')
+          ..write('parsedBy: $parsedBy, ')
+          ..write('status: $status, ')
+          ..write('entryId: $entryId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CaptureRulesTable extends CaptureRules with TableInfo<$CaptureRulesTable, CaptureRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CaptureRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
+  @override
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta('categoryId');
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES accounts (id)'),
+  );
+  static const VerificationMeta _fundAccountIdMeta = const VerificationMeta('fundAccountId');
+  @override
+  late final GeneratedColumn<String> fundAccountId = GeneratedColumn<String>(
+    'fund_account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES accounts (id)'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [key, categoryId, fundAccountId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'capture_rules';
+  @override
+  VerificationContext validateIntegrity(Insertable<CaptureRule> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('key')) {
+      context.handle(_keyMeta, key.isAcceptableOrUnknown(data['key']!, _keyMeta));
+    } else if (isInserting) {
+      context.missing(_keyMeta);
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(_categoryIdMeta, categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta));
+    }
+    if (data.containsKey('fund_account_id')) {
+      context.handle(
+        _fundAccountIdMeta,
+        fundAccountId.isAcceptableOrUnknown(data['fund_account_id']!, _fundAccountIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {key};
+  @override
+  CaptureRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CaptureRule(
+      key: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}key'])!,
+      categoryId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}category_id']),
+      fundAccountId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}fund_account_id']),
+    );
+  }
+
+  @override
+  $CaptureRulesTable createAlias(String alias) {
+    return $CaptureRulesTable(attachedDatabase, alias);
+  }
+}
+
+class CaptureRule extends DataClass implements Insertable<CaptureRule> {
+  final String key;
+  final String? categoryId;
+  final String? fundAccountId;
+  const CaptureRule({required this.key, this.categoryId, this.fundAccountId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['key'] = Variable<String>(key);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || fundAccountId != null) {
+      map['fund_account_id'] = Variable<String>(fundAccountId);
+    }
+    return map;
+  }
+
+  CaptureRulesCompanion toCompanion(bool nullToAbsent) {
+    return CaptureRulesCompanion(
+      key: Value(key),
+      categoryId: categoryId == null && nullToAbsent ? const Value.absent() : Value(categoryId),
+      fundAccountId: fundAccountId == null && nullToAbsent ? const Value.absent() : Value(fundAccountId),
+    );
+  }
+
+  factory CaptureRule.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CaptureRule(
+      key: serializer.fromJson<String>(json['key']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      fundAccountId: serializer.fromJson<String?>(json['fundAccountId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'key': serializer.toJson<String>(key),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'fundAccountId': serializer.toJson<String?>(fundAccountId),
+    };
+  }
+
+  CaptureRule copyWith({
+    String? key,
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> fundAccountId = const Value.absent(),
+  }) => CaptureRule(
+    key: key ?? this.key,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    fundAccountId: fundAccountId.present ? fundAccountId.value : this.fundAccountId,
+  );
+  CaptureRule copyWithCompanion(CaptureRulesCompanion data) {
+    return CaptureRule(
+      key: data.key.present ? data.key.value : this.key,
+      categoryId: data.categoryId.present ? data.categoryId.value : this.categoryId,
+      fundAccountId: data.fundAccountId.present ? data.fundAccountId.value : this.fundAccountId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaptureRule(')
+          ..write('key: $key, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fundAccountId: $fundAccountId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(key, categoryId, fundAccountId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CaptureRule &&
+          other.key == this.key &&
+          other.categoryId == this.categoryId &&
+          other.fundAccountId == this.fundAccountId);
+}
+
+class CaptureRulesCompanion extends UpdateCompanion<CaptureRule> {
+  final Value<String> key;
+  final Value<String?> categoryId;
+  final Value<String?> fundAccountId;
+  final Value<int> rowid;
+  const CaptureRulesCompanion({
+    this.key = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.fundAccountId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CaptureRulesCompanion.insert({
+    required String key,
+    this.categoryId = const Value.absent(),
+    this.fundAccountId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : key = Value(key);
+  static Insertable<CaptureRule> custom({
+    Expression<String>? key,
+    Expression<String>? categoryId,
+    Expression<String>? fundAccountId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (key != null) 'key': key,
+      if (categoryId != null) 'category_id': categoryId,
+      if (fundAccountId != null) 'fund_account_id': fundAccountId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CaptureRulesCompanion copyWith({
+    Value<String>? key,
+    Value<String?>? categoryId,
+    Value<String?>? fundAccountId,
+    Value<int>? rowid,
+  }) {
+    return CaptureRulesCompanion(
+      key: key ?? this.key,
+      categoryId: categoryId ?? this.categoryId,
+      fundAccountId: fundAccountId ?? this.fundAccountId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (fundAccountId.present) {
+      map['fund_account_id'] = Variable<String>(fundAccountId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CaptureRulesCompanion(')
+          ..write('key: $key, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('fundAccountId: $fundAccountId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3651,6 +4783,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $BudgetsTable budgets = $BudgetsTable(this);
   late final $TemplatesTable templates = $TemplatesTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $CapturesTable captures = $CapturesTable(this);
+  late final $CaptureRulesTable captureRules = $CaptureRulesTable(this);
   late final Index idxEntriesOccurredAt = Index(
     'idx_entries_occurred_at',
     'CREATE INDEX idx_entries_occurred_at ON journal_entries (occurred_at)',
@@ -3662,6 +4796,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxPostingsEntry = Index(
     'idx_postings_entry',
     'CREATE INDEX idx_postings_entry ON postings (entry_id)',
+  );
+  late final Index idxCapturesStatus = Index(
+    'idx_captures_status',
+    'CREATE INDEX idx_captures_status ON captures (status)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3676,9 +4814,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     budgets,
     templates,
     settings,
+    captures,
+    captureRules,
     idxEntriesOccurredAt,
     idxPostingsAccount,
     idxPostingsEntry,
+    idxCapturesStatus,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -3697,6 +4838,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName('journal_entries', limitUpdateKind: UpdateKind.delete),
       result: [TableUpdate('attachments', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName('journal_entries', limitUpdateKind: UpdateKind.delete),
+      result: [TableUpdate('captures', kind: UpdateKind.update)],
     ),
   ]);
   @override
@@ -3804,6 +4949,58 @@ final class $$AccountsTableReferences extends BaseReferences<_$AppDatabase, $Acc
     ).filter((f) => f.toAccountId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_templatesToTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CapturesTable, List<Capture>> _capturesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.captures, aliasName: 'accounts__id__captures__category_id');
+
+  $$CapturesTableProcessedTableManager get capturesRefs {
+    final manager = $$CapturesTableTableManager(
+      $_db,
+      $_db.captures,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_capturesRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CapturesTable, List<Capture>> _capturesFundTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.captures, aliasName: 'accounts__id__captures__fund_account_id');
+
+  $$CapturesTableProcessedTableManager get capturesFund {
+    final manager = $$CapturesTableTableManager(
+      $_db,
+      $_db.captures,
+    ).filter((f) => f.fundAccountId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_capturesFundTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CaptureRulesTable, List<CaptureRule>> _captureRulesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.captureRules, aliasName: 'accounts__id__capture_rules__category_id');
+
+  $$CaptureRulesTableProcessedTableManager get captureRulesRefs {
+    final manager = $$CaptureRulesTableTableManager(
+      $_db,
+      $_db.captureRules,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_captureRulesRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CaptureRulesTable, List<CaptureRule>> _captureRulesFundTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.captureRules, aliasName: 'accounts__id__capture_rules__fund_account_id');
+
+  $$CaptureRulesTableProcessedTableManager get captureRulesFund {
+    final manager = $$CaptureRulesTableTableManager(
+      $_db,
+      $_db.captureRules,
+    ).filter((f) => f.fundAccountId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_captureRulesFundTable($_db));
     return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 }
@@ -3936,6 +5133,78 @@ class $$AccountsTableFilterComposer extends Composer<_$AppDatabase, $AccountsTab
           $$TemplatesTableFilterComposer(
             $db: $db,
             $table: $db.templates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> capturesRefs(Expression<bool> Function($$CapturesTableFilterComposer f) f) {
+    final $$CapturesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captures,
+      getReferencedColumn: (t) => t.categoryId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CapturesTableFilterComposer(
+            $db: $db,
+            $table: $db.captures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> capturesFund(Expression<bool> Function($$CapturesTableFilterComposer f) f) {
+    final $$CapturesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captures,
+      getReferencedColumn: (t) => t.fundAccountId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CapturesTableFilterComposer(
+            $db: $db,
+            $table: $db.captures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> captureRulesRefs(Expression<bool> Function($$CaptureRulesTableFilterComposer f) f) {
+    final $$CaptureRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captureRules,
+      getReferencedColumn: (t) => t.categoryId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CaptureRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.captureRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> captureRulesFund(Expression<bool> Function($$CaptureRulesTableFilterComposer f) f) {
+    final $$CaptureRulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captureRules,
+      getReferencedColumn: (t) => t.fundAccountId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CaptureRulesTableFilterComposer(
+            $db: $db,
+            $table: $db.captureRules,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
@@ -4140,6 +5409,78 @@ class $$AccountsTableAnnotationComposer extends Composer<_$AppDatabase, $Account
     );
     return f(composer);
   }
+
+  Expression<T> capturesRefs<T extends Object>(Expression<T> Function($$CapturesTableAnnotationComposer a) f) {
+    final $$CapturesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captures,
+      getReferencedColumn: (t) => t.categoryId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CapturesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.captures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> capturesFund<T extends Object>(Expression<T> Function($$CapturesTableAnnotationComposer a) f) {
+    final $$CapturesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captures,
+      getReferencedColumn: (t) => t.fundAccountId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CapturesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.captures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> captureRulesRefs<T extends Object>(Expression<T> Function($$CaptureRulesTableAnnotationComposer a) f) {
+    final $$CaptureRulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captureRules,
+      getReferencedColumn: (t) => t.categoryId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CaptureRulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.captureRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> captureRulesFund<T extends Object>(Expression<T> Function($$CaptureRulesTableAnnotationComposer a) f) {
+    final $$CaptureRulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captureRules,
+      getReferencedColumn: (t) => t.fundAccountId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CaptureRulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.captureRules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AccountsTableTableManager
@@ -4161,6 +5502,10 @@ class $$AccountsTableTableManager
             bool budgetsRefs,
             bool templatesFrom,
             bool templatesTo,
+            bool capturesRefs,
+            bool capturesFund,
+            bool captureRulesRefs,
+            bool captureRulesFund,
           })
         > {
   $$AccountsTableTableManager(_$AppDatabase db, $AccountsTable table)
@@ -4253,6 +5598,10 @@ class $$AccountsTableTableManager
                 budgetsRefs = false,
                 templatesFrom = false,
                 templatesTo = false,
+                capturesRefs = false,
+                capturesFund = false,
+                captureRulesRefs = false,
+                captureRulesFund = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -4261,6 +5610,10 @@ class $$AccountsTableTableManager
                     if (budgetsRefs) db.budgets,
                     if (templatesFrom) db.templates,
                     if (templatesTo) db.templates,
+                    if (capturesRefs) db.captures,
+                    if (capturesFund) db.captures,
+                    if (captureRulesRefs) db.captureRules,
+                    if (captureRulesFund) db.captureRules,
                   ],
                   addJoins:
                       <
@@ -4327,6 +5680,42 @@ class $$AccountsTableTableManager
                               referencedItems.where((e) => e.toAccountId == item.id),
                           typedResults: items,
                         ),
+                      if (capturesRefs)
+                        await $_getPrefetchedData<Account, $AccountsTable, Capture>(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences._capturesRefsTable(db),
+                          managerFromTypedResult: (p0) => $$AccountsTableReferences(db, table, p0).capturesRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.categoryId == item.id),
+                          typedResults: items,
+                        ),
+                      if (capturesFund)
+                        await $_getPrefetchedData<Account, $AccountsTable, Capture>(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences._capturesFundTable(db),
+                          managerFromTypedResult: (p0) => $$AccountsTableReferences(db, table, p0).capturesFund,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.fundAccountId == item.id),
+                          typedResults: items,
+                        ),
+                      if (captureRulesRefs)
+                        await $_getPrefetchedData<Account, $AccountsTable, CaptureRule>(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences._captureRulesRefsTable(db),
+                          managerFromTypedResult: (p0) => $$AccountsTableReferences(db, table, p0).captureRulesRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.categoryId == item.id),
+                          typedResults: items,
+                        ),
+                      if (captureRulesFund)
+                        await $_getPrefetchedData<Account, $AccountsTable, CaptureRule>(
+                          currentTable: table,
+                          referencedTable: $$AccountsTableReferences._captureRulesFundTable(db),
+                          managerFromTypedResult: (p0) => $$AccountsTableReferences(db, table, p0).captureRulesFund,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.fundAccountId == item.id),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4347,7 +5736,17 @@ typedef $$AccountsTableProcessedTableManager =
       $$AccountsTableUpdateCompanionBuilder,
       (Account, $$AccountsTableReferences),
       Account,
-      PrefetchHooks Function({bool parentId, bool postingsRefs, bool budgetsRefs, bool templatesFrom, bool templatesTo})
+      PrefetchHooks Function({
+        bool parentId,
+        bool postingsRefs,
+        bool budgetsRefs,
+        bool templatesFrom,
+        bool templatesTo,
+        bool capturesRefs,
+        bool capturesFund,
+        bool captureRulesRefs,
+        bool captureRulesFund,
+      })
     >;
 typedef $$JournalEntriesTableCreateCompanionBuilder = JournalEntriesCompanion Function({
   Value<DateTime> createdAt,
@@ -4417,6 +5816,19 @@ final class $$JournalEntriesTableReferences extends BaseReferences<_$AppDatabase
     ).filter((f) => f.entryId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_attachmentsRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+
+  static MultiTypedResultKey<$CapturesTable, List<Capture>> _capturesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.captures, aliasName: 'journal_entries__id__captures__entry_id');
+
+  $$CapturesTableProcessedTableManager get capturesRefs {
+    final manager = $$CapturesTableTableManager(
+      $_db,
+      $_db.captures,
+    ).filter((f) => f.entryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_capturesRefsTable($_db));
     return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
   }
 }
@@ -4506,6 +5918,24 @@ class $$JournalEntriesTableFilterComposer extends Composer<_$AppDatabase, $Journ
           $$AttachmentsTableFilterComposer(
             $db: $db,
             $table: $db.attachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> capturesRefs(Expression<bool> Function($$CapturesTableFilterComposer f) f) {
+    final $$CapturesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captures,
+      getReferencedColumn: (t) => t.entryId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CapturesTableFilterComposer(
+            $db: $db,
+            $table: $db.captures,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
@@ -4643,6 +6073,24 @@ class $$JournalEntriesTableAnnotationComposer extends Composer<_$AppDatabase, $J
     );
     return f(composer);
   }
+
+  Expression<T> capturesRefs<T extends Object>(Expression<T> Function($$CapturesTableAnnotationComposer a) f) {
+    final $$CapturesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.captures,
+      getReferencedColumn: (t) => t.entryId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$CapturesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.captures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$JournalEntriesTableTableManager
@@ -4658,7 +6106,7 @@ class $$JournalEntriesTableTableManager
           $$JournalEntriesTableUpdateCompanionBuilder,
           (JournalEntry, $$JournalEntriesTableReferences),
           JournalEntry,
-          PrefetchHooks Function({bool postingsRefs, bool entryTagsRefs, bool attachmentsRefs})
+          PrefetchHooks Function({bool postingsRefs, bool entryTagsRefs, bool attachmentsRefs, bool capturesRefs})
         > {
   $$JournalEntriesTableTableManager(_$AppDatabase db, $JournalEntriesTable table)
     : super(
@@ -4732,48 +6180,60 @@ class $$JournalEntriesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({postingsRefs = false, entryTagsRefs = false, attachmentsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (postingsRefs) db.postings,
-                if (entryTagsRefs) db.entryTags,
-                if (attachmentsRefs) db.attachments,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (postingsRefs)
-                    await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, Posting>(
-                      currentTable: table,
-                      referencedTable: $$JournalEntriesTableReferences._postingsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$JournalEntriesTableReferences(db, table, p0).postingsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.entryId == item.id),
-                      typedResults: items,
-                    ),
-                  if (entryTagsRefs)
-                    await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, EntryTag>(
-                      currentTable: table,
-                      referencedTable: $$JournalEntriesTableReferences._entryTagsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$JournalEntriesTableReferences(db, table, p0).entryTagsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.entryId == item.id),
-                      typedResults: items,
-                    ),
-                  if (attachmentsRefs)
-                    await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, Attachment>(
-                      currentTable: table,
-                      referencedTable: $$JournalEntriesTableReferences._attachmentsRefsTable(db),
-                      managerFromTypedResult: (p0) => $$JournalEntriesTableReferences(db, table, p0).attachmentsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.entryId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({postingsRefs = false, entryTagsRefs = false, attachmentsRefs = false, capturesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (postingsRefs) db.postings,
+                    if (entryTagsRefs) db.entryTags,
+                    if (attachmentsRefs) db.attachments,
+                    if (capturesRefs) db.captures,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (postingsRefs)
+                        await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, Posting>(
+                          currentTable: table,
+                          referencedTable: $$JournalEntriesTableReferences._postingsRefsTable(db),
+                          managerFromTypedResult: (p0) => $$JournalEntriesTableReferences(db, table, p0).postingsRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.entryId == item.id),
+                          typedResults: items,
+                        ),
+                      if (entryTagsRefs)
+                        await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, EntryTag>(
+                          currentTable: table,
+                          referencedTable: $$JournalEntriesTableReferences._entryTagsRefsTable(db),
+                          managerFromTypedResult: (p0) => $$JournalEntriesTableReferences(db, table, p0).entryTagsRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.entryId == item.id),
+                          typedResults: items,
+                        ),
+                      if (attachmentsRefs)
+                        await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, Attachment>(
+                          currentTable: table,
+                          referencedTable: $$JournalEntriesTableReferences._attachmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$JournalEntriesTableReferences(db, table, p0).attachmentsRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.entryId == item.id),
+                          typedResults: items,
+                        ),
+                      if (capturesRefs)
+                        await $_getPrefetchedData<JournalEntry, $JournalEntriesTable, Capture>(
+                          currentTable: table,
+                          referencedTable: $$JournalEntriesTableReferences._capturesRefsTable(db),
+                          managerFromTypedResult: (p0) => $$JournalEntriesTableReferences(db, table, p0).capturesRefs,
+                          referencedItemsForCurrentItem: (item, referencedItems) =>
+                              referencedItems.where((e) => e.entryId == item.id),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -4790,7 +6250,7 @@ typedef $$JournalEntriesTableProcessedTableManager =
       $$JournalEntriesTableUpdateCompanionBuilder,
       (JournalEntry, $$JournalEntriesTableReferences),
       JournalEntry,
-      PrefetchHooks Function({bool postingsRefs, bool entryTagsRefs, bool attachmentsRefs})
+      PrefetchHooks Function({bool postingsRefs, bool entryTagsRefs, bool attachmentsRefs, bool capturesRefs})
     >;
 typedef $$PostingsTableCreateCompanionBuilder = PostingsCompanion Function({
   Value<String> id,
@@ -6739,6 +8199,889 @@ typedef $$SettingsTableProcessedTableManager =
       Setting,
       PrefetchHooks Function()
     >;
+typedef $$CapturesTableCreateCompanionBuilder = CapturesCompanion Function({
+  Value<String> id,
+  required EntrySource source,
+  required String sourceKey,
+  Value<String?> sourceLabel,
+  required String externalId,
+  Value<String?> title,
+  required String body,
+  required DateTime occurredAt,
+  Value<int?> amount,
+  Value<String?> currency,
+  Value<String?> merchant,
+  Value<bool> isIncome,
+  Value<bool> isTransfer,
+  Value<String?> categoryId,
+  Value<String?> fundAccountId,
+  Value<ParsedBy> parsedBy,
+  Value<CaptureStatus> status,
+  Value<String?> entryId,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+typedef $$CapturesTableUpdateCompanionBuilder = CapturesCompanion Function({
+  Value<String> id,
+  Value<EntrySource> source,
+  Value<String> sourceKey,
+  Value<String?> sourceLabel,
+  Value<String> externalId,
+  Value<String?> title,
+  Value<String> body,
+  Value<DateTime> occurredAt,
+  Value<int?> amount,
+  Value<String?> currency,
+  Value<String?> merchant,
+  Value<bool> isIncome,
+  Value<bool> isTransfer,
+  Value<String?> categoryId,
+  Value<String?> fundAccountId,
+  Value<ParsedBy> parsedBy,
+  Value<CaptureStatus> status,
+  Value<String?> entryId,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+final class $$CapturesTableReferences extends BaseReferences<_$AppDatabase, $CapturesTable, Capture> {
+  $$CapturesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $AccountsTable _categoryIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias('captures__category_id__accounts__id');
+
+  $$AccountsTableProcessedTableManager? get categoryId {
+    final $_column = $_itemColumn<String>('category_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager($_db, $_db.accounts).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $AccountsTable _fundAccountIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias('captures__fund_account_id__accounts__id');
+
+  $$AccountsTableProcessedTableManager? get fundAccountId {
+    final $_column = $_itemColumn<String>('fund_account_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager($_db, $_db.accounts).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_fundAccountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $JournalEntriesTable _entryIdTable(_$AppDatabase db) =>
+      db.journalEntries.createAlias('captures__entry_id__journal_entries__id');
+
+  $$JournalEntriesTableProcessedTableManager? get entryId {
+    final $_column = $_itemColumn<String>('entry_id');
+    if ($_column == null) return null;
+    final manager = $$JournalEntriesTableTableManager(
+      $_db,
+      $_db.journalEntries,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_entryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CapturesTableFilterComposer extends Composer<_$AppDatabase, $CapturesTable> {
+  $$CapturesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<EntrySource, EntrySource, String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<String> get sourceKey =>
+      $composableBuilder(column: $table.sourceKey, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceLabel =>
+      $composableBuilder(column: $table.sourceLabel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get body => $composableBuilder(column: $table.body, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get occurredAt =>
+      $composableBuilder(column: $table.occurredAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get merchant =>
+      $composableBuilder(column: $table.merchant, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isIncome =>
+      $composableBuilder(column: $table.isIncome, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isTransfer =>
+      $composableBuilder(column: $table.isTransfer, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<ParsedBy, ParsedBy, String> get parsedBy =>
+      $composableBuilder(column: $table.parsedBy, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnWithTypeConverterFilters<CaptureStatus, CaptureStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  $$AccountsTableFilterComposer get categoryId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableFilterComposer get fundAccountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fundAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$JournalEntriesTableFilterComposer get entryId {
+    final $$JournalEntriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entryId,
+      referencedTable: $db.journalEntries,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$JournalEntriesTableFilterComposer(
+            $db: $db,
+            $table: $db.journalEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CapturesTableOrderingComposer extends Composer<_$AppDatabase, $CapturesTable> {
+  $$CapturesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceKey =>
+      $composableBuilder(column: $table.sourceKey, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceLabel =>
+      $composableBuilder(column: $table.sourceLabel, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get externalId =>
+      $composableBuilder(column: $table.externalId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get occurredAt =>
+      $composableBuilder(column: $table.occurredAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get merchant =>
+      $composableBuilder(column: $table.merchant, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isIncome =>
+      $composableBuilder(column: $table.isIncome, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isTransfer =>
+      $composableBuilder(column: $table.isTransfer, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get parsedBy =>
+      $composableBuilder(column: $table.parsedBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  $$AccountsTableOrderingComposer get categoryId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableOrderingComposer get fundAccountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fundAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$JournalEntriesTableOrderingComposer get entryId {
+    final $$JournalEntriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entryId,
+      referencedTable: $db.journalEntries,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$JournalEntriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.journalEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CapturesTableAnnotationComposer extends Composer<_$AppDatabase, $CapturesTable> {
+  $$CapturesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<EntrySource, String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceKey => $composableBuilder(column: $table.sourceKey, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceLabel =>
+      $composableBuilder(column: $table.sourceLabel, builder: (column) => column);
+
+  GeneratedColumn<String> get externalId => $composableBuilder(column: $table.externalId, builder: (column) => column);
+
+  GeneratedColumn<String> get title => $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get body => $composableBuilder(column: $table.body, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get occurredAt =>
+      $composableBuilder(column: $table.occurredAt, builder: (column) => column);
+
+  GeneratedColumn<int> get amount => $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get currency => $composableBuilder(column: $table.currency, builder: (column) => column);
+
+  GeneratedColumn<String> get merchant => $composableBuilder(column: $table.merchant, builder: (column) => column);
+
+  GeneratedColumn<bool> get isIncome => $composableBuilder(column: $table.isIncome, builder: (column) => column);
+
+  GeneratedColumn<bool> get isTransfer => $composableBuilder(column: $table.isTransfer, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<ParsedBy, String> get parsedBy =>
+      $composableBuilder(column: $table.parsedBy, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CaptureStatus, String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt => $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$AccountsTableAnnotationComposer get categoryId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableAnnotationComposer get fundAccountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fundAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$JournalEntriesTableAnnotationComposer get entryId {
+    final $$JournalEntriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.entryId,
+      referencedTable: $db.journalEntries,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$JournalEntriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.journalEntries,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CapturesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CapturesTable,
+          Capture,
+          $$CapturesTableFilterComposer,
+          $$CapturesTableOrderingComposer,
+          $$CapturesTableAnnotationComposer,
+          $$CapturesTableCreateCompanionBuilder,
+          $$CapturesTableUpdateCompanionBuilder,
+          (Capture, $$CapturesTableReferences),
+          Capture,
+          PrefetchHooks Function({bool categoryId, bool fundAccountId, bool entryId})
+        > {
+  $$CapturesTableTableManager(_$AppDatabase db, $CapturesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$CapturesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$CapturesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$CapturesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<EntrySource> source = const Value.absent(),
+                Value<String> sourceKey = const Value.absent(),
+                Value<String?> sourceLabel = const Value.absent(),
+                Value<String> externalId = const Value.absent(),
+                Value<String?> title = const Value.absent(),
+                Value<String> body = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<int?> amount = const Value.absent(),
+                Value<String?> currency = const Value.absent(),
+                Value<String?> merchant = const Value.absent(),
+                Value<bool> isIncome = const Value.absent(),
+                Value<bool> isTransfer = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> fundAccountId = const Value.absent(),
+                Value<ParsedBy> parsedBy = const Value.absent(),
+                Value<CaptureStatus> status = const Value.absent(),
+                Value<String?> entryId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CapturesCompanion(
+                id: id,
+                source: source,
+                sourceKey: sourceKey,
+                sourceLabel: sourceLabel,
+                externalId: externalId,
+                title: title,
+                body: body,
+                occurredAt: occurredAt,
+                amount: amount,
+                currency: currency,
+                merchant: merchant,
+                isIncome: isIncome,
+                isTransfer: isTransfer,
+                categoryId: categoryId,
+                fundAccountId: fundAccountId,
+                parsedBy: parsedBy,
+                status: status,
+                entryId: entryId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required EntrySource source,
+                required String sourceKey,
+                Value<String?> sourceLabel = const Value.absent(),
+                required String externalId,
+                Value<String?> title = const Value.absent(),
+                required String body,
+                required DateTime occurredAt,
+                Value<int?> amount = const Value.absent(),
+                Value<String?> currency = const Value.absent(),
+                Value<String?> merchant = const Value.absent(),
+                Value<bool> isIncome = const Value.absent(),
+                Value<bool> isTransfer = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> fundAccountId = const Value.absent(),
+                Value<ParsedBy> parsedBy = const Value.absent(),
+                Value<CaptureStatus> status = const Value.absent(),
+                Value<String?> entryId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CapturesCompanion.insert(
+                id: id,
+                source: source,
+                sourceKey: sourceKey,
+                sourceLabel: sourceLabel,
+                externalId: externalId,
+                title: title,
+                body: body,
+                occurredAt: occurredAt,
+                amount: amount,
+                currency: currency,
+                merchant: merchant,
+                isIncome: isIncome,
+                isTransfer: isTransfer,
+                categoryId: categoryId,
+                fundAccountId: fundAccountId,
+                parsedBy: parsedBy,
+                status: status,
+                entryId: entryId,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable<$CapturesTable, Capture>(table), $$CapturesTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({categoryId = false, fundAccountId = false, entryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (categoryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.categoryId,
+                        referencedTable: $$CapturesTableReferences._categoryIdTable(db),
+                        referencedColumn: $$CapturesTableReferences._categoryIdTable(db).id,
+                      ) as T;
+                    }
+                    if (fundAccountId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.fundAccountId,
+                        referencedTable: $$CapturesTableReferences._fundAccountIdTable(db),
+                        referencedColumn: $$CapturesTableReferences._fundAccountIdTable(db).id,
+                      ) as T;
+                    }
+                    if (entryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.entryId,
+                        referencedTable: $$CapturesTableReferences._entryIdTable(db),
+                        referencedColumn: $$CapturesTableReferences._entryIdTable(db).id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CapturesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CapturesTable,
+      Capture,
+      $$CapturesTableFilterComposer,
+      $$CapturesTableOrderingComposer,
+      $$CapturesTableAnnotationComposer,
+      $$CapturesTableCreateCompanionBuilder,
+      $$CapturesTableUpdateCompanionBuilder,
+      (Capture, $$CapturesTableReferences),
+      Capture,
+      PrefetchHooks Function({bool categoryId, bool fundAccountId, bool entryId})
+    >;
+typedef $$CaptureRulesTableCreateCompanionBuilder = CaptureRulesCompanion Function({
+  required String key,
+  Value<String?> categoryId,
+  Value<String?> fundAccountId,
+  Value<int> rowid,
+});
+typedef $$CaptureRulesTableUpdateCompanionBuilder = CaptureRulesCompanion Function({
+  Value<String> key,
+  Value<String?> categoryId,
+  Value<String?> fundAccountId,
+  Value<int> rowid,
+});
+
+final class $$CaptureRulesTableReferences extends BaseReferences<_$AppDatabase, $CaptureRulesTable, CaptureRule> {
+  $$CaptureRulesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $AccountsTable _categoryIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias('capture_rules__category_id__accounts__id');
+
+  $$AccountsTableProcessedTableManager? get categoryId {
+    final $_column = $_itemColumn<String>('category_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager($_db, $_db.accounts).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $AccountsTable _fundAccountIdTable(_$AppDatabase db) =>
+      db.accounts.createAlias('capture_rules__fund_account_id__accounts__id');
+
+  $$AccountsTableProcessedTableManager? get fundAccountId {
+    final $_column = $_itemColumn<String>('fund_account_id');
+    if ($_column == null) return null;
+    final manager = $$AccountsTableTableManager($_db, $_db.accounts).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_fundAccountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$CaptureRulesTableFilterComposer extends Composer<_$AppDatabase, $CaptureRulesTable> {
+  $$CaptureRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get key => $composableBuilder(column: $table.key, builder: (column) => ColumnFilters(column));
+
+  $$AccountsTableFilterComposer get categoryId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableFilterComposer get fundAccountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fundAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CaptureRulesTableOrderingComposer extends Composer<_$AppDatabase, $CaptureRulesTable> {
+  $$CaptureRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => ColumnOrderings(column));
+
+  $$AccountsTableOrderingComposer get categoryId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableOrderingComposer get fundAccountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fundAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CaptureRulesTableAnnotationComposer extends Composer<_$AppDatabase, $CaptureRulesTable> {
+  $$CaptureRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get key => $composableBuilder(column: $table.key, builder: (column) => column);
+
+  $$AccountsTableAnnotationComposer get categoryId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AccountsTableAnnotationComposer get fundAccountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.fundAccountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CaptureRulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CaptureRulesTable,
+          CaptureRule,
+          $$CaptureRulesTableFilterComposer,
+          $$CaptureRulesTableOrderingComposer,
+          $$CaptureRulesTableAnnotationComposer,
+          $$CaptureRulesTableCreateCompanionBuilder,
+          $$CaptureRulesTableUpdateCompanionBuilder,
+          (CaptureRule, $$CaptureRulesTableReferences),
+          CaptureRule,
+          PrefetchHooks Function({bool categoryId, bool fundAccountId})
+        > {
+  $$CaptureRulesTableTableManager(_$AppDatabase db, $CaptureRulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$CaptureRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$CaptureRulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$CaptureRulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<String?> categoryId = const Value.absent(),
+            Value<String?> fundAccountId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => CaptureRulesCompanion(key: key, categoryId: categoryId, fundAccountId: fundAccountId, rowid: rowid),
+          createCompanionCallback:
+              ({
+                required String key,
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> fundAccountId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CaptureRulesCompanion.insert(
+                key: key,
+                categoryId: categoryId,
+                fundAccountId: fundAccountId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) =>
+                    (e.readTable<$CaptureRulesTable, CaptureRule>(table), $$CaptureRulesTableReferences(db, table, e)),
+              )
+              .toList(),
+          prefetchHooksCallback: ({categoryId = false, fundAccountId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (categoryId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.categoryId,
+                        referencedTable: $$CaptureRulesTableReferences._categoryIdTable(db),
+                        referencedColumn: $$CaptureRulesTableReferences._categoryIdTable(db).id,
+                      ) as T;
+                    }
+                    if (fundAccountId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.fundAccountId,
+                        referencedTable: $$CaptureRulesTableReferences._fundAccountIdTable(db),
+                        referencedColumn: $$CaptureRulesTableReferences._fundAccountIdTable(db).id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CaptureRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CaptureRulesTable,
+      CaptureRule,
+      $$CaptureRulesTableFilterComposer,
+      $$CaptureRulesTableOrderingComposer,
+      $$CaptureRulesTableAnnotationComposer,
+      $$CaptureRulesTableCreateCompanionBuilder,
+      $$CaptureRulesTableUpdateCompanionBuilder,
+      (CaptureRule, $$CaptureRulesTableReferences),
+      CaptureRule,
+      PrefetchHooks Function({bool categoryId, bool fundAccountId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6752,4 +9095,6 @@ class $AppDatabaseManager {
   $$BudgetsTableTableManager get budgets => $$BudgetsTableTableManager(_db, _db.budgets);
   $$TemplatesTableTableManager get templates => $$TemplatesTableTableManager(_db, _db.templates);
   $$SettingsTableTableManager get settings => $$SettingsTableTableManager(_db, _db.settings);
+  $$CapturesTableTableManager get captures => $$CapturesTableTableManager(_db, _db.captures);
+  $$CaptureRulesTableTableManager get captureRules => $$CaptureRulesTableTableManager(_db, _db.captureRules);
 }

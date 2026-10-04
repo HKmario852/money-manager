@@ -1,8 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Gemini 解析同 Gmail 收據要上網 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 八達通拍卡讀餘額 -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <!-- App 內更新：將下載好嘅新版本交俾系統安裝 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:label="記錄課金"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait"
@@ -26,6 +36,25 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 讀取付款 App 通知，自動記帳（要用戶喺系統設定手動開啟） -->
+        <service
+            android:name=".PaymentNotificationListener"
+            android:label="記錄課金自動記帳"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -38,6 +67,13 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <!-- 顯示常見付款 App 嘅名 -->
+        <package android:name="hk.alipay.wallet" />
+        <package android:name="com.android.vending" />
+        <package android:name="com.google.android.apps.walletnfcrel" />
+        <package android:name="com.octopuscards.nfc_reader" />
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.hsbc.hsbchkmobilebanking" />
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

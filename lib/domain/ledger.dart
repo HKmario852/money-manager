@@ -83,7 +83,12 @@ class Ledger {
 
   // ---------------------------------------------------------------- 寫入
 
-  Future<String> saveEntry(EntryDraft d, {String? entryId, EntrySource source = EntrySource.manual}) async {
+  Future<String> saveEntry(
+    EntryDraft d, {
+    String? entryId,
+    EntrySource source = EntrySource.manual,
+    String? externalId,
+  }) async {
     if (d.amount <= 0) throw LedgerException('金額要大過 0');
     if (d.fromAccountId == d.toAccountId) throw LedgerException('兩個賬戶唔可以一樣');
     final from = await _account(d.fromAccountId);
@@ -104,6 +109,7 @@ class Ledger {
                 note: Value(_blankToNull(d.note)),
                 merchant: Value(_blankToNull(d.merchant)),
                 source: Value(source),
+                externalId: Value(externalId),
               ),
             );
       } else {
@@ -417,9 +423,9 @@ class Ledger {
     return {for (final r in rows) r.read(p.accountId)!: r.read(total) ?? 0};
   }
 
-  Future<int> netWorth() async {
+  Future<int> netWorth({DateTime? asOf}) async {
     final accounts = await db.select(db.accounts).get();
-    final bal = await balances();
+    final bal = await balances(asOf: asOf);
     return accounts.where((a) => isFund(a.type)).fold<int>(0, (s, a) => s + (bal[a.id] ?? 0));
   }
 
@@ -437,6 +443,10 @@ class Ledger {
     });
     return PeriodSummary(from, income, expense);
   }
+
+  Future<List<PeriodSummary>> summaries(List<(DateTime, DateTime)> ranges) async => [
+    for (final (from, to) in ranges) await summary(from, to),
+  ];
 
   Future<List<PeriodSummary>> recentPeriods(int count, int startDay, {DateTime? now}) async {
     final result = <PeriodSummary>[];

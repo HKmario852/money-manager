@@ -9,6 +9,7 @@ import '../domain/ledger.dart';
 import '../providers.dart';
 import 'common.dart';
 import 'entry_screen.dart';
+import 'theme.dart';
 
 class TxTile extends StatelessWidget {
   const TxTile(this.tx, {super.key, this.forAccount, this.accounts});
@@ -33,9 +34,30 @@ class TxTile extends StatelessWidget {
       ...tx.tags.map((t) => '#${t.name}'),
     ].join(' · ');
     return ListTile(
-      leading: isTransfer ? const CircleAvatar(child: Icon(Icons.swap_horiz)) : AccountAvatar(avatarAccount),
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: subtitle.isEmpty ? null : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      visualDensity: VisualDensity.compact,
+      leading: isTransfer
+          ? Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: AppColors.chip, borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.swap_horiz, size: 20),
+            )
+          : AccountAvatar(avatarAccount),
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+      ),
+      subtitle: subtitle.isEmpty
+          ? null
+          : Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -43,7 +65,7 @@ class TxTile extends StatelessWidget {
           AmountText(
             displayAmount(tx, forAccount: forAccount),
             neutral: isTransfer && forAccount == null,
-            style: Theme.of(context).textTheme.titleMedium,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           ),
         ],
       ),
@@ -64,10 +86,26 @@ class TxList extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <Widget>[?header];
     DateTime? day;
+    var group = <Widget>[];
+    void flush() {
+      if (group.isEmpty) return;
+      items.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Column(children: group),
+          ),
+        ),
+      );
+      group = [];
+    }
+
     for (var i = 0; i < txs.length; i++) {
       final tx = txs[i];
       final d = DateTime(tx.entry.occurredAt.year, tx.entry.occurredAt.month, tx.entry.occurredAt.day);
       if (d != day) {
+        flush();
         day = d;
         final dayTotal = txs
             .where((t) => DateUtils.isSameDay(t.entry.occurredAt, d))
@@ -75,21 +113,28 @@ class TxList extends StatelessWidget {
             .fold(0, (s, t) => s + displayAmount(t, forAccount: forAccount));
         items.add(
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            padding: const EdgeInsets.fromLTRB(22, 14, 22, 2),
             child: Row(
               children: [
-                Text(formatDate(d), style: Theme.of(context).textTheme.labelLarge),
+                Text(
+                  formatDate(d),
+                  style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                ),
                 const Spacer(),
-                AmountText(dayTotal, style: Theme.of(context).textTheme.labelLarge),
+                AmountText(
+                  dayTotal,
+                  style: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),
         );
       }
-      items.add(TxTile(tx, forAccount: forAccount, accounts: accounts));
+      group.add(TxTile(tx, forAccount: forAccount, accounts: accounts));
     }
+    flush();
     if (txs.isEmpty) items.add(const EmptyState('呢段時間未有交易'));
-    items.add(const SizedBox(height: 96));
+    items.add(const SizedBox(height: 32));
     return ListView(children: items);
   }
 }
@@ -243,9 +288,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           accounts: accounts,
           header: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [_Stat('支出', -expense), _Stat('收入', income), _Stat('結餘', income - expense)],
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [_Stat('支出', -expense), _Stat('收入', income), _Stat('結餘', income - expense)],
+              ),
             ),
           ),
         );
@@ -260,11 +308,16 @@ class _Stat extends StatelessWidget {
   final int amount;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Text(label, style: Theme.of(context).textTheme.labelMedium),
-      AmountText(amount, style: Theme.of(context).textTheme.titleMedium),
-    ],
+  Widget build(BuildContext context) => Expanded(
+    child: Column(
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: AmountText(amount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        ),
+      ],
+    ),
   );
 }
 
@@ -378,13 +431,15 @@ class TransactionDetailScreen extends ConsumerWidget {
                         builder: (_) => Scaffold(
                           backgroundColor: Colors.black,
                           appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
-                          body: InteractiveViewer(child: Center(child: Image.file(File(p.join(attDir, a.filePath))))),
+                          body: InteractiveViewer(
+                            child: Center(child: Image.file(File(p.join(attDir, p.basename(a.filePath))))),
+                          ),
                         ),
                       ),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.file(File(p.join(attDir, a.filePath)), height: 200, fit: BoxFit.cover),
+                      child: Image.file(File(p.join(attDir, p.basename(a.filePath))), height: 200, fit: BoxFit.cover),
                     ),
                   ),
                 ),

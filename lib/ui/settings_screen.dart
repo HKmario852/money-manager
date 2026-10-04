@@ -8,8 +8,10 @@ import 'package:share_plus/share_plus.dart';
 import '../data/database.dart';
 import '../domain/backup.dart';
 import '../providers.dart';
+import 'capture_screens.dart';
 import 'common.dart';
 import 'manage_screens.dart';
+import 'update_ui.dart';
 
 const kCurrencies = ['HKD', 'CNY', 'TWD', 'MOP', 'USD', 'JPY', 'GBP', 'EUR', 'SGD'];
 
@@ -60,12 +62,27 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) => v != null ? db.setSetting(SettingKeys.monthStartDay, '$v') : null,
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.savings_outlined),
+            title: const Text('儲蓄率目標'),
+            subtitle: const Text('統計頁會同你嘅實際儲蓄率比較'),
+            trailing: DropdownButton<int>(
+              value: ref.watch(savingsTargetProvider),
+              underline: const SizedBox(),
+              items: [for (var p = 0; p <= 90; p += 5) DropdownMenuItem(value: p, child: Text('$p%'))],
+              onChanged: (v) => v != null ? db.setSetting(SettingKeys.savingsTarget, '$v') : null,
+            ),
+          ),
           SwitchListTile(
             secondary: const Icon(Icons.fingerprint),
             title: const Text('私隱鎖'),
             subtitle: const Text('開 App 要用指紋 / Face ID 解鎖'),
             value: lock,
             onChanged: (v) async {
+              if (v && !await LocalAuthentication().isDeviceSupported()) {
+                if (context.mounted) showError(context, '部機未設定鎖屏密碼或者指紋，開唔到私隱鎖');
+                return;
+              }
               if (v && !await authenticateUser('確認開啟私隱鎖')) return;
               await db.setSetting(SettingKeys.biometricLock, '$v');
             },
@@ -89,6 +106,13 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => push(const TemplatesScreen()),
           ),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: const Text('自動記錄'),
+            subtitle: const Text('讀付款通知、Gmail 收據，Gemini 幫手分類'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => push(const AutoCaptureSettingsScreen()),
+          ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.ios_share),
@@ -102,20 +126,79 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('會覆蓋而家所有數據'),
             onTap: () => restoreFromBackup(context, ref),
           ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.system_update_outlined),
+            title: const Text('檢查更新'),
+            subtitle: Text(switch (ref.watch(packageInfoProvider).value) {
+              final i? => '目前版本 ${i.version}（build ${i.buildNumber}）',
+              null => ' ',
+            }),
+            onTap: () => checkForUpdate(context, ref, manual: true),
+          ),
         ],
       ),
     );
   }
 }
 
+/// 問匯出密碼（可以留空）。返回 null = 取消。
+Future<String?> _askExportPassword(BuildContext context) {
+  final first = TextEditingController();
+  final second = TextEditingController();
+  String? error;
+  return showDialog<String>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => AlertDialog(
+        title: const Text('備份密碼'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('設密碼會用 AES 加密個備份檔。留空就唔加密。忘記密碼就冇辦法還原。'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: first,
+              obscureText: true,
+              decoration: const InputDecoration(hintText: '密碼（可留空）'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: second,
+              obscureText: true,
+              decoration: InputDecoration(hintText: '再輸入一次', errorText: error),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              if (first.text != second.text) {
+                setState(() => error = '兩次輸入唔一樣');
+                return;
+              }
+              Navigator.pop(c, first.text);
+            },
+            child: const Text('匯出'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 Future<void> exportAndShare(BuildContext context, WidgetRef ref) async {
   final messenger = ScaffoldMessenger.of(context);
+  final password = await _askExportPassword(context);
+  if (password == null) return;
   try {
     final tmp = await getTemporaryDirectory();
     final zip = await exportBackup(
       ref.read(databaseProvider),
       attachmentsDir: ref.read(appPathsProvider).attachments,
       tempDir: tmp.path,
+      password: password,
     );
     await SharePlus.instance.share(ShareParams(files: [XFile(zip)], subject: '記錄課金備份'));
   } catch (e) {
@@ -128,17 +211,37 @@ Future<void> restoreFromBackup(BuildContext context, WidgetRef ref) async {
   final files = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip']);
   final path = files.firstOrNull?.path;
   if (path == null || !context.mounted) return;
-  if (!await confirm(context, '還原備份？', message: '而家所有記錄會被備份入面嘅數據取代，冇得復原。', ok: '還原')) return;
+  String? password;
   try {
-    final tmp = await getTemporaryDirectory();
-    final unpacked = await unpackBackup(path, tempDir: tmp.path);
+    if (await isEncryptedBackup(path)) {
+      if (!context.mounted) return;
+      password = await promptText(context, '輸入備份密碼', obscure: true);
+      if (password == null) return;
+    }
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('還原失敗：$e')));
+    return;
+  }
+  if (!context.mounted) return;
+  if (!await confirm(context, '還原備份？', message: '而家所有記錄會被備份入面嘅數據取代。', ok: '還原')) return;
+  final tmp = await getTemporaryDirectory();
+  final db = ref.read(databaseProvider);
+  final String unpacked;
+  try {
+    // 先解壓同檢查，冇問題先關資料庫覆蓋
+    unpacked = await unpackBackup(path, tempDir: tmp.path, password: password, maxSchemaVersion: db.schemaVersion);
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text('還原失敗：$e')));
+    return;
+  }
+  try {
     final paths = ref.read(appPathsProvider);
-    await ref.read(databaseProvider).close();
+    await db.close();
     await applyBackup(unpacked, databasePath: paths.database, attachmentsDir: paths.attachments);
     ref.invalidate(databaseProvider);
     messenger.showSnackBar(const SnackBar(content: Text('已還原')));
   } catch (e) {
     ref.invalidate(databaseProvider);
-    messenger.showSnackBar(SnackBar(content: Text('還原失敗：$e')));
+    messenger.showSnackBar(SnackBar(content: Text('還原失敗，已保留原本數據：$e')));
   }
 }
