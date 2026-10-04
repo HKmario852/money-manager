@@ -7,6 +7,7 @@ import '../data/database.dart';
 import '../domain/app_spending.dart';
 import '../domain/money.dart';
 import '../providers.dart';
+import 'capture_screens.dart';
 import 'common.dart';
 import 'theme.dart';
 import 'transactions_screen.dart';
@@ -228,6 +229,7 @@ class _AppSpendingScreenState extends ConsumerState<AppSpendingScreen> {
                 ],
               ),
             ),
+            const _PendingHint(),
             const SizedBox(height: 6),
             if (list.isEmpty)
               const EmptyState('呢段時間未有課金、訂閱或者買 App 嘅記錄', icon: Icons.sports_esports_outlined)
@@ -312,6 +314,40 @@ class AppDetailScreen extends ConsumerWidget {
           ],
         );
       }),
+    );
+  }
+}
+
+/// 匯入咗但未入帳嘅課金唔計入面，提一提。
+class _PendingHint extends ConsumerWidget {
+  const _PendingHint();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(accountMapProvider);
+    final ids = appCategoryIds(accounts.values);
+    final pending = (ref.watch(pendingCapturesProvider).value ?? const <Capture>[])
+        .where((c) => ids.contains(c.categoryId))
+        .length;
+    if (pending == 0) return const SizedBox();
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: AppCard(
+        color: AppColors.peach,
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen())),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '仲有 $pending 筆課金等確認，入帳之後先會計入呢度',
+                style: const TextStyle(color: AppColors.peachInk, fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.peachInk),
+          ],
+        ),
+      ),
     );
   }
 }

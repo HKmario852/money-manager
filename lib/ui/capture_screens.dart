@@ -159,6 +159,16 @@ class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
                 padding: const EdgeInsets.only(bottom: 6),
                 child: FilledButton.icon(
                   onPressed: () async {
+                    final total = ready.fold(0, (s, c) => s + (c.amount ?? 0));
+                    if (ready.length > 5 &&
+                        !await confirm(
+                          context,
+                          '全部入帳？',
+                          message: '${ready.length} 筆，共 ${formatMoney(total)}',
+                          ok: '入帳',
+                        )) {
+                      return;
+                    }
                     for (final c in ready) {
                       await _confirm(c);
                     }
@@ -238,7 +248,11 @@ class _CaptureCard extends ConsumerWidget {
 
     Future<void> pickFund() async {
       final picked = await pickAccount(context, fundAccounts(accounts.values), title: '揀賬戶');
-      if (picked != null) await service.update(c.id, fundId: picked.id);
+      if (picked == null) return;
+      final others = await service.setFund(c, picked.id);
+      if (others > 0 && context.mounted) {
+        showError(context, '另外 $others 筆${c.sourceLabel ?? ''}都用咗「${picked.name}」');
+      }
     }
 
     Widget chip(Account? a, String placeholder, VoidCallback onTap) => ActionChip(
@@ -801,15 +815,46 @@ Future<void> importTakeout(BuildContext context, WidgetRef ref) async {
   if (!context.mounted) return;
 
   final items = takeoutToCaptures(purchases, since: cutoff);
-  final report = await ref.read(captureSyncProvider).importTakeout(items);
-  if (!context.mounted) return;
+  final job = ref.read(captureSyncProvider).importTakeout(items);
+  final report = await showDialog<SyncReport>(
+    context: context,
+    barrierDismissible: false,
+    builder: (c) {
+      job.then(
+        (r) {
+          if (c.mounted) Navigator.pop(c, r);
+        },
+        onError: (Object e) {
+          if (c.mounted) Navigator.pop(c, SyncReport(errors: ['$e']));
+        },
+      );
+      return AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Expanded(child: Text('匯入緊 ${items.length} 筆…')),
+          ],
+        ),
+      );
+    },
+  );
+  if (report == null || !context.mounted) return;
   final msg = [
     if (report.added > 0) '新增 ${report.added} 筆待確認',
     if (report.autoConfirmed > 0) '自動入帳 ${report.autoConfirmed} 筆',
     if (report.skipped > 0) '${report.skipped} 筆之前匯入過或者已經記咗，略過',
+    ...report.errors,
   ];
-  showError(context, msg.isEmpty ? '冇新嘅購買' : msg.join('\n'));
-  if (report.added > 0) {
+  await showDialog<void>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text(report.added + report.autoConfirmed > 0 ? '匯入完成' : '冇新嘅購買'),
+      content: Text(msg.isEmpty ? '揀咗嘅時間入面冇購買' : msg.join('\n')),
+      actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('好'))],
+    ),
+  );
+  if (report.added > 0 && context.mounted) {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen()));
   }
 }

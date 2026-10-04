@@ -263,6 +263,25 @@ class CaptureService {
   )..where((c) => c.id.equals(captureId))).write(const CapturesCompanion(status: Value(CaptureStatus.dismissed)));
 
   /// 用戶喺待確認改分類 / 賬戶（未入帳）。
+  /// 揀咗付款賬戶：同一個來源（例如 Takeout 嘅 AlipayHK）未揀賬戶嘅待確認都一齊用，並記住。
+  /// 返回另外更新咗幾多筆。
+  Future<int> setFund(Capture capture, String fundId) => db.transaction(() async {
+    await update(capture.id, fundId: fundId);
+    await db
+        .into(db.captureRules)
+        .insertOnConflictUpdate(
+          CaptureRulesCompanion.insert(key: 's:${capture.sourceKey}', fundAccountId: Value(fundId)),
+        );
+    return (db.update(db.captures)..where(
+          (c) =>
+              c.id.equals(capture.id).not() &
+              c.sourceKey.equals(capture.sourceKey) &
+              c.status.equalsValue(CaptureStatus.pending) &
+              c.fundAccountId.isNull(),
+        ))
+        .write(CapturesCompanion(fundAccountId: Value(fundId)));
+  });
+
   Future<void> update(String captureId, {String? categoryId, String? fundId, int? amount}) =>
       (db.update(db.captures)..where((c) => c.id.equals(captureId))).write(
         CapturesCompanion(
