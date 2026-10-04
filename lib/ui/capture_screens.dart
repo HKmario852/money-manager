@@ -76,6 +76,71 @@ class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
     showError(context, msg.isEmpty ? '冇新記錄' : msg.join('\n'));
   }
 
+  bool confirmingAll = false;
+
+  /// 一鍵全確認：未揀賬戶嘅按來源（例如 AlipayHK、Mastercard）一次過揀，再全部入帳。
+  Future<void> _confirmAll() async {
+    final db = ref.read(databaseProvider);
+    final service = ref.read(captureServiceProvider);
+    Future<List<Capture>> pending() =>
+        (db.select(db.captures)..where((c) => c.status.equalsValue(CaptureStatus.pending))).get();
+
+    final missing = <String, List<Capture>>{};
+    for (final c in await pending()) {
+      if (c.amount != null && c.fundAccountId == null) missing.putIfAbsent(c.sourceKey, () => []).add(c);
+    }
+    if (missing.isNotEmpty) {
+      if (!mounted) return;
+      final funds = fundAccounts(ref.read(accountMapProvider).values);
+      if (funds.isEmpty) return showError(context, '請先開一個資金賬戶');
+      final picked = await showDialog<Map<String, String>>(
+        context: context,
+        builder: (_) => _FundMappingDialog(groups: missing, funds: funds),
+      );
+      if (picked == null) return;
+      for (final MapEntry(:key, :value) in picked.entries) {
+        await service.setFund(missing[key]!.first, value);
+      }
+    }
+
+    final all = await pending();
+    final ready = all
+        .where(
+          (c) =>
+              c.amount != null &&
+              c.categoryId != null &&
+              c.fundAccountId != null &&
+              (c.currency == null || c.currency == 'HKD'),
+        )
+        .toList();
+    if (!mounted) return;
+    if (ready.isEmpty) return showError(context, '冇可以直接入帳嘅記錄，請逐筆揀分類');
+    final total = ready.fold(0, (s, c) => s + c.amount!);
+    final left = all.length - ready.length;
+    if (!await confirm(
+      context,
+      '全部入帳？',
+      message: '${ready.length} 筆，共 ${formatMoney(total)}${left > 0 ? '\n另外 $left 筆未有分類或者係外幣，會留低' : ''}',
+      ok: '入帳',
+    )) {
+      return;
+    }
+    setState(() => confirmingAll = true);
+    var done = 0;
+    final errors = <String>{};
+    for (final c in ready) {
+      try {
+        await service.confirm(c);
+        done++;
+      } catch (e) {
+        errors.add('$e');
+      }
+    }
+    if (!mounted) return;
+    setState(() => confirmingAll = false);
+    showError(context, ['已入帳 $done 筆', ...errors].join('\n'));
+  }
+
   Future<void> _confirm(Capture c) async {
     try {
       await ref.read(captureServiceProvider).confirm(c);
@@ -122,9 +187,6 @@ class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
   Widget build(BuildContext context) {
     final pending = ref.watch(pendingCapturesProvider);
     final accounts = ref.watch(accountMapProvider);
-    final ready = (pending.value ?? const <Capture>[])
-        .where((c) => c.amount != null && c.categoryId != null && c.fundAccountId != null)
-        .toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('待確認'),
@@ -154,29 +216,14 @@ class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           children: [
-            if (ready.length > 1)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: FilledButton.icon(
-                  onPressed: () async {
-                    final total = ready.fold(0, (s, c) => s + (c.amount ?? 0));
-                    if (ready.length > 5 &&
-                        !await confirm(
-                          context,
-                          '全部入帳？',
-                          message: '${ready.length} 筆，共 ${formatMoney(total)}',
-                          ok: '入帳',
-                        )) {
-                      return;
-                    }
-                    for (final c in ready) {
-                      await _confirm(c);
-                    }
-                  },
-                  icon: const Icon(Icons.done_all, color: AppColors.lime),
-                  label: Text('全部入帳（${ready.length} 筆已填好）'),
-                ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: FilledButton.icon(
+                onPressed: confirmingAll ? null : _confirmAll,
+                icon: const Icon(Icons.done_all, color: AppColors.lime),
+                label: Text(confirmingAll ? '入帳緊…' : '一鍵全確認（${list.length} 筆）'),
               ),
+            ),
             for (final c in list)
               Dismissible(
                 key: ValueKey(c.id),
@@ -856,5 +903,70 @@ Future<void> importTakeout(BuildContext context, WidgetRef ref) async {
   );
   if (report.added > 0 && context.mounted) {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen()));
+  }
+}
+
+/// 一鍵全確認前：每個未有賬戶嘅來源揀一個付款賬戶（會記住）。
+class _FundMappingDialog extends StatefulWidget {
+  const _FundMappingDialog({required this.groups, required this.funds});
+  final Map<String, List<Capture>> groups;
+  final List<Account> funds;
+
+  @override
+  State<_FundMappingDialog> createState() => _FundMappingDialogState();
+}
+
+class _FundMappingDialogState extends State<_FundMappingDialog> {
+  late final Map<String, String> choice = {
+    for (final MapEntry(:key, :value) in widget.groups.entries) key: _guess(value.first),
+  };
+
+  /// 名相似就揀嗰個（例如「八達通」對 Octopus 唔會中，就用第一個賬戶）。
+  String _guess(Capture c) {
+    final label = (c.sourceLabel ?? '').toLowerCase();
+    for (final a in widget.funds) {
+      final name = a.name.toLowerCase();
+      if (label.isNotEmpty && (name.contains(label) || label.contains(name))) return a.id;
+    }
+    return widget.funds.first.id;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('呢啲用邊個賬戶俾錢？'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final MapEntry(:key, :value) in widget.groups.entries)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${value.first.sourceLabel ?? key}（${value.length} 筆）',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      value: choice[key],
+                      items: [for (final a in widget.funds) DropdownMenuItem(value: a.id, child: Text(a.name))],
+                      onChanged: (v) => setState(() => choice[key] = v!),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 6),
+            const Text('之後同一個付款方法會自動用返呢個賬戶。', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+        FilledButton(onPressed: () => Navigator.pop(context, choice), child: const Text('繼續')),
+      ],
+    );
   }
 }

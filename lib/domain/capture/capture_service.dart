@@ -5,6 +5,7 @@ import '../ledger.dart';
 import '../money.dart';
 import 'gemini.dart';
 import 'parser.dart';
+import 'takeout.dart';
 
 /// 通知或者電郵嘅原始內容。
 class RawCapture {
@@ -27,6 +28,24 @@ class RawCapture {
   final DateTime occurredAt;
 }
 
+/// Google Play 收據電郵：用訂單編號做 id（同 Takeout 一樣，兩邊都有就唔會入兩次），
+/// 按付款方法分來源（同 Takeout 嘅 AlipayHK 用同一個賬戶），內容淨係留項目同金額。
+/// 唔係 Play 收據或者讀唔到就原封不動返回。
+RawCapture playReceiptCapture(RawCapture raw) {
+  if (raw.source != EntrySource.email || !raw.sourceKey.contains('googleplay')) return raw;
+  final r = readPlayReceipt('${raw.title ?? ''}\n${raw.body}');
+  if (r.orderId == null && r.paymentMethod == null && r.itemLine == null) return raw;
+  return RawCapture(
+    source: raw.source,
+    sourceKey: r.paymentMethod != null || r.orderId != null ? playSourceKey(r.paymentMethod) : raw.sourceKey,
+    sourceLabel: r.paymentMethod ?? raw.sourceLabel,
+    externalId: r.orderId != null ? 'takeout:${r.orderId}' : raw.externalId,
+    title: raw.title,
+    body: r.itemLine ?? (r.orderId != null ? '訂單 ${r.orderId}' : raw.body),
+    occurredAt: raw.occurredAt,
+  );
+}
+
 enum IngestOutcome { added, autoConfirmed, duplicate, notPayment, alreadySeen, needsGemini }
 
 /// 唔同來源報同一筆錢（例如 AlipayHK 通知 + Play 收據電郵），喺呢個時間內當重複。
@@ -39,13 +58,14 @@ class CaptureService {
   AppDatabase get db => ledger.db;
 
   /// 處理一個通知或者電郵。[gemini] 係 null 就只用規則。
-  Future<IngestOutcome> ingest(RawCapture raw, {GeminiParser? gemini, bool autoConfirm = false}) async {
+  Future<IngestOutcome> ingest(RawCapture original, {GeminiParser? gemini, bool autoConfirm = false}) async {
+    final raw = playReceiptCapture(original);
     final seen = await (db.select(db.captures)..where((c) => c.externalId.equals(raw.externalId))).getSingleOrNull();
     if (seen != null) return IngestOutcome.alreadySeen;
 
     final accounts = await (db.select(db.accounts)..where((a) => a.deletedAt.isNull())).get();
     var parsedBy = ParsedBy.rule;
-    final rules = parseByRules(sourceKey: raw.sourceKey, title: raw.title, body: raw.body);
+    final rules = parseByRules(sourceKey: original.sourceKey, title: original.title, body: original.body);
     ParsedPayment? payment = rules.payment;
     if (rules.isPayment == false) return IngestOutcome.notPayment;
     if (payment == null) {
@@ -280,6 +300,65 @@ class CaptureService {
               c.fundAccountId.isNull(),
         ))
         .write(CapturesCompanion(fundAccountId: Value(fundId)));
+  });
+
+  /// 舊版本讀錯咗嘅 Play 收據（項目名得個「。」、成封電郵做內容、付款方法當咗 Google Play）：
+  /// 用新規則重新讀。Takeout 已經有同一張訂單就用返 Takeout 嗰筆。返回修正咗幾多筆。
+  Future<int> repairPlayReceipts() => db.transaction(() async {
+    final old = await (db.select(
+      db.captures,
+    )..where((c) => c.sourceKey.like('%googleplay%') & c.status.equalsValue(CaptureStatus.pending))).get();
+    if (old.isEmpty) return 0;
+    final accounts = await (db.select(db.accounts)..where((a) => a.deletedAt.isNull())).get();
+    var fixed = 0;
+    for (final c in old) {
+      final original = RawCapture(
+        source: c.source,
+        sourceKey: c.sourceKey,
+        sourceLabel: c.sourceLabel,
+        externalId: c.externalId,
+        title: c.title,
+        body: c.body,
+        occurredAt: c.occurredAt,
+      );
+      final raw = playReceiptCapture(original);
+      if (identical(raw, original)) continue;
+      final payment = parseByRules(sourceKey: c.sourceKey, title: c.title, body: c.body).payment;
+
+      final twin = raw.externalId == c.externalId
+          ? null
+          : await (db.select(db.captures)..where((x) => x.externalId.equals(raw.externalId))).getSingleOrNull();
+      if (twin != null) {
+        // Takeout 嗰筆資料齊（App 名、付款方法），留佢；收據呢筆當重複
+        await (db.update(
+          db.captures,
+        )..where((x) => x.id.equals(c.id))).write(const CapturesCompanion(status: Value(CaptureStatus.duplicate)));
+        if (twin.status == CaptureStatus.duplicate) {
+          await (db.update(
+            db.captures,
+          )..where((x) => x.id.equals(twin.id))).write(const CapturesCompanion(status: Value(CaptureStatus.pending)));
+        }
+        fixed++;
+        continue;
+      }
+
+      final merchant = payment?.merchant ?? c.merchant;
+      final fundId = c.fundAccountId ?? await _suggestFund(raw, accounts);
+      final categoryId = c.categoryId ?? (payment == null ? null : await _suggestCategory(payment, accounts));
+      await (db.update(db.captures)..where((x) => x.id.equals(c.id))).write(
+        CapturesCompanion(
+          sourceKey: Value(raw.sourceKey),
+          sourceLabel: Value(raw.sourceLabel),
+          externalId: Value(raw.externalId),
+          body: Value(raw.body),
+          merchant: Value(merchant),
+          categoryId: Value(categoryId),
+          fundAccountId: Value(fundId),
+        ),
+      );
+      fixed++;
+    }
+    return fixed;
   });
 
   Future<void> update(String captureId, {String? categoryId, String? fundId, int? amount}) =>

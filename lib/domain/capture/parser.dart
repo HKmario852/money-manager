@@ -77,7 +77,8 @@ int? _toMinor(String s) => parseMinor(s.replaceAll(',', ''));
 
 /// 用固定規則讀付款資料。[sourceKey] 係套件名或者寄件人。
 RuleResult parseByRules({required String sourceKey, String? title, required String body}) {
-  final text = '${title ?? ''}\n$body';
+  // 電郵每行係 \r\n 結尾
+  final text = '${title ?? ''}\n$body'.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
   // Google Play 收據電郵：搵「總計 / Total」
   if (sourceKey.contains('googleplay') || (sourceKey == 'com.android.vending' && _payRe.hasMatch(text))) {
@@ -87,7 +88,11 @@ RuleResult parseByRules({required String sourceKey, String? title, required Stri
     final amount = raw != null ? _toMinor(raw) : null;
     if (amount == null || amount <= 0) return const RuleResult.unsure();
     return RuleResult.payment(
-      ParsedPayment(amount: amount, merchant: _playItem(text) ?? 'Google Play', categoryHint: '娛樂 › 課金'),
+      ParsedPayment(
+        amount: amount,
+        merchant: readPlayReceipt(text).item ?? 'Google Play',
+        categoryHint: RegExp(r'續訂|訂閱|subscription|renew', caseSensitive: false).hasMatch(text) ? '娛樂 › 訂閱' : '娛樂 › 課金',
+      ),
     );
   }
 
@@ -117,12 +122,55 @@ RuleResult parseByRules({required String sourceKey, String? title, required Stri
   );
 }
 
-/// Play 收據入面嘅項目名（盡量），例如「Genshin Impact: 60 創世結晶」。
-String? _playItem(String text) {
-  final m = RegExp(r'(?:Item|項目|商品)[:：]?\s*\n?\s*([^\n]{2,60})', caseSensitive: false).firstMatch(text);
-  final item = m?.group(1)?.trim();
-  if (item == null || item.isEmpty || _amountRe.hasMatch(item) && item.length < 12) return null;
-  return item;
+/// Play 收據入面嘅資料：項目名（例如「月卡 (明日方舟)」）、訂單編號、付款方法。
+({String? item, String? itemLine, String? orderId, String? paymentMethod}) readPlayReceipt(String text) {
+  final lines = text
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty)
+      .toList();
+
+  // 「商品 價格」表頭下面嗰行先係項目；前面「…購買了商品。」嗰句唔係
+  String? itemLine;
+  final header = lines.indexWhere(_playHeaderRe.hasMatch);
+  if (header >= 0 && header + 1 < lines.length) {
+    itemLine = lines[header + 1];
+  } else {
+    itemLine = lines.map((l) => _playItemFieldRe.firstMatch(l)?.group(1)?.trim()).nonNulls.firstOrNull;
+  }
+  var item = itemLine?.replaceFirst(_trailingPriceRe, '').trim();
+  if (item != null && !RegExp(r'\p{L}', unicode: true).hasMatch(item)) item = null;
+
+  String? method;
+  final m = lines.indexWhere((l) => _playMethodRe.hasMatch(l));
+  if (m >= 0) {
+    final rest = lines[m].replaceFirst(_playMethodRe, '').trim();
+    method = playPaymentMethod(rest.isNotEmpty ? rest : (m + 1 < lines.length ? lines[m + 1] : null));
+  }
+
+  return (
+    item: (item == null || item.isEmpty) ? null : item,
+    itemLine: item == null ? null : itemLine,
+    orderId: _playOrderRe.firstMatch(text)?.group(0),
+    paymentMethod: method,
+  );
+}
+
+final _playHeaderRe = RegExp(r'^(?:商品|項目|Item)(?:\s*(?:數量|價格|價錢|金額|Qty|Quantity|Price))*$', caseSensitive: false);
+final _playItemFieldRe = RegExp(r'^(?:商品|項目|Item)\s*[:：]\s*(.+)$', caseSensitive: false);
+final _trailingPriceRe = RegExp(
+  r'\s*(?:[A-Z]{0,3}\$|＄|€|£|¥|HKD|USD)\s?[0-9][0-9,.]*.*$|\s+[0-9][0-9,.]*\s?(?:HKD|USD)\b.*$',
+);
+final _playMethodRe = RegExp(r'^(?:付款方法|付款方式|Payment method)\s*[:：]?', caseSensitive: false);
+final _playOrderRe = RegExp(r'\b[A-Z]{3}\.[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{5}(?:\.\.[0-9]+)?');
+
+/// 「AlipayHK：852-12****34」→「AlipayHK」；「MasterCard-1234」→「Mastercard」。卡號同餘額唔留。
+String? playPaymentMethod(String? displayName) {
+  final name = displayName?.split(RegExp(r'[：:]|-\s*\d')).first.trim();
+  if (name == null || name.isEmpty) return null;
+  return name.toLowerCase() == 'mastercard' ? 'Mastercard' : name;
 }
 
 /// 由商戶名 / 內容估分類。

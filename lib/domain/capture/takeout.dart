@@ -10,6 +10,10 @@ import 'parser.dart';
 /// Google Takeout 匯入嘅來源 key（同 Gmail 收據唔同 key，所以兩邊報同一筆會當重複）。
 const takeoutSourceKey = 'google-takeout';
 
+/// 每個付款方法一個 key，咁樣 app 會分別記住 AlipayHK、信用卡等等對應邊個賬戶。Gmail 收據都用同一個 key。
+String playSourceKey(String? paymentMethod) =>
+    paymentMethod == null ? takeoutSourceKey : '$takeoutSourceKey:${paymentMethod.toLowerCase()}';
+
 class TakeoutException implements Exception {
   const TakeoutException(this.message);
   final String message;
@@ -135,13 +139,6 @@ String? _orderKind(Map<String, dynamic> o) => [
     if ((li['doc'] as Map?)?['documentType'] case final String k) k,
 ].firstOrNull;
 
-/// 「AlipayHK：852-12****34」→「AlipayHK」；「MasterCard-1234」→「Mastercard」。卡號同餘額唔留。
-String? playPaymentMethod(String? displayName) {
-  final name = displayName?.split(RegExp(r'[：:]|-\s*\d')).first.trim();
-  if (name == null || name.isEmpty) return null;
-  return name.toLowerCase() == 'mastercard' ? 'Mastercard' : name;
-}
-
 PlayPurchase? _purchase({
   String? id,
   String? title,
@@ -213,8 +210,7 @@ List<(RawCapture, ParsedPayment)> takeoutToCaptures(List<PlayPurchase> purchases
       (
         RawCapture(
           source: EntrySource.import,
-          // 每個付款方法一個 key，咁樣 app 會分別記住 AlipayHK、信用卡等等對應邊個賬戶
-          sourceKey: p.paymentMethod == null ? takeoutSourceKey : '$takeoutSourceKey:${p.paymentMethod!.toLowerCase()}',
+          sourceKey: playSourceKey(p.paymentMethod),
           sourceLabel: p.paymentMethod ?? 'Google Play',
           externalId: 'takeout:${p.id}',
           title: 'Google Play 購買記錄',
