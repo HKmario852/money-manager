@@ -50,9 +50,9 @@ void main() {
 
   test('再匯出會清走舊嘅暫存備份', () async {
     final first = await export();
-    File(first).renameSync(p.join(tmp.path, '記錄課金備份_old.zip'));
+    File(first).renameSync(p.join(tmp.path, 'MoneyExpense_backup_old.zip'));
     await export();
-    expect(File(p.join(tmp.path, '記錄課金備份_old.zip')).existsSync(), isFalse);
+    expect(File(p.join(tmp.path, 'MoneyExpense_backup_old.zip')).existsSync(), isFalse);
   });
 
   test('假資料庫或者新版本備份會被拒絕', () async {

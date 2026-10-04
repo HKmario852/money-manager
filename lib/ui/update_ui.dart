@@ -112,7 +112,7 @@ Future<void> checkForUpdate(BuildContext context, WidgetRef ref, {bool manual = 
     }
     try {
       if (!await updater.install(apk) && context.mounted) {
-        showError(context, '請喺打開咗嘅設定頁允許「記錄課金」安裝應用程式，返嚟再撳一次「檢查更新」。');
+        showError(context, '請喺打開咗嘅設定頁允許「Money Expense」安裝應用程式，返嚟再撳一次「檢查更新」。');
       }
     } catch (e) {
       if (context.mounted) showError(context, e);
