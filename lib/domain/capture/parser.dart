@@ -86,7 +86,10 @@ RuleResult parseByRules({required String sourceKey, String? title, required Stri
     final m = total ?? _amountRe.firstMatch(text.replaceAll(_balanceRe, ''));
     final raw = total?.group(1) ?? m?.group(1) ?? m?.group(2);
     final amount = raw != null ? _toMinor(raw) : null;
-    if (amount == null || amount <= 0) return const RuleResult.unsure();
+    if (amount == null || amount <= 0) {
+      // Play 電郵冇金額 = 唔係收據（例如「訂閱將被取消」）
+      return sourceKey.contains('googleplay') ? const RuleResult.notPayment() : const RuleResult.unsure();
+    }
     return RuleResult.payment(
       ParsedPayment(
         amount: amount,
