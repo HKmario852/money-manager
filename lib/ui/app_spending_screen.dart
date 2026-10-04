@@ -473,7 +473,7 @@ class _FindIconsScreenState extends ConsumerState<FindIconsScreen> {
       setState(() {
         results[name] = found;
         // 淨係得一個 App 嗰陣用戶自己揀咗要搵，第一個就預先揀咗
-        if (found.isNotEmpty && (widget.names.length == 1 || namesMatch(name, found.first.title))) chosen[name] = 0;
+        if (found.isNotEmpty && (widget.names.length == 1 || found.first.matches(name))) chosen[name] = 0;
       });
     }
   }
