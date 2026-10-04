@@ -41,7 +41,7 @@ void main() {
 
     await tester.pumpWidget(app());
     await settle(tester);
-    expect(find.text('歡迎使用記錄課金'), findsOneWidget);
+    expect(find.text('歡迎使用 Money Expense'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextField, '銀包而家有幾多錢'), '500');
     await tester.tap(find.text('開始記賬'));

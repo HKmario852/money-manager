@@ -200,7 +200,7 @@ Future<void> exportAndShare(BuildContext context, WidgetRef ref) async {
       tempDir: tmp.path,
       password: password,
     );
-    await SharePlus.instance.share(ShareParams(files: [XFile(zip)], subject: '記錄課金備份'));
+    await SharePlus.instance.share(ShareParams(files: [XFile(zip)], subject: 'Money Expense 備份'));
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text('匯出失敗：$e')));
   }
