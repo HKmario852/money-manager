@@ -6,6 +6,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:money_manager/data/database.dart';
 import 'package:money_manager/domain/capture/capture_service.dart';
+import 'package:money_manager/domain/capture/parser.dart';
 import 'package:money_manager/domain/capture/takeout.dart';
 import 'package:money_manager/domain/ledger.dart';
 
