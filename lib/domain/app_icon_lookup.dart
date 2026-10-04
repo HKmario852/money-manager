@@ -9,12 +9,17 @@ import 'capture/parser.dart';
 
 /// 網上搵到嘅 App 圖示。
 class IconCandidate {
-  const IconCandidate({required this.title, required this.iconUrl, required this.store});
+  const IconCandidate({required this.title, required this.iconUrl, required this.store, this.aliases = const []});
   final String title;
   final String iconUrl;
 
   /// App Store / Google Play
   final String store;
+
+  /// 其他語言嘅名，例如香港 App Store 寫「漫威未來之戰」，英文係「MARVEL Future Fight」
+  final List<String> aliases;
+
+  bool matches(String appName) => namesMatch(appName, title) || aliases.any((a) => namesMatch(appName, a));
 }
 
 /// 用 App 名上網搵圖示：先 App Store（有正式 API），再 Google Play（讀網頁嘅 og:image）。
@@ -45,17 +50,32 @@ class AppIconLookup {
     final seen = <String>{};
     final unique = [
       for (final c in found)
-        if (seen.add(merchantKey(c.title))) c,
+        if (seen.add(c.iconUrl) & seen.add(merchantKey(c.title))) c,
     ];
-    unique.sort((a, b) => _score(name, b.title).compareTo(_score(name, a.title)));
+    unique.sort((a, b) => _score(name, b).compareTo(_score(name, a)));
     return unique.take(5).toList();
   }
 
+  /// 香港 App Store 啲名多數係中文，所以中英文各搵一次，同一個 App 合併埋兩個名。
   Future<List<IconCandidate>> _apple(String name) async {
-    final uri = Uri.parse('$appleBase/search')
-        .replace(queryParameters: {'term': name, 'country': 'hk', 'entity': 'software', 'limit': '3'});
-    final text = await _get(uri);
-    return text == null ? const [] : parseAppleSearch(text);
+    final byIcon = <String, IconCandidate>{};
+    for (final lang in ['zh_hk', 'en_us']) {
+      final uri = Uri.parse('$appleBase/search')
+          .replace(queryParameters: {'term': name, 'country': 'hk', 'entity': 'software', 'limit': '3', 'lang': lang});
+      final text = await _get(uri);
+      for (final c in text == null ? const <IconCandidate>[] : parseAppleSearch(text)) {
+        final had = byIcon[c.iconUrl];
+        byIcon[c.iconUrl] = had == null
+            ? c
+            : IconCandidate(
+                title: had.title,
+                iconUrl: had.iconUrl,
+                store: had.store,
+                aliases: [...had.aliases, if (merchantKey(c.title) != merchantKey(had.title)) c.title],
+              );
+      }
+    }
+    return byIcon.values.toList();
   }
 
   Future<List<IconCandidate>> _play(String name) async {
@@ -172,12 +192,10 @@ bool namesMatch(String appName, String found) {
   return a == b || (a.length >= 2 && b.contains(a)) || (b.length >= 2 && a.contains(b));
 }
 
-int _score(String name, String title) {
+int _score(String name, IconCandidate c) {
   final a = merchantKey(name);
-  final b = merchantKey(title);
-  if (a == b) return 3;
-  if (namesMatch(name, title)) return 2;
-  return 0;
+  if ([c.title, ...c.aliases].any((t) => merchantKey(t) == a)) return 3;
+  return c.matches(name) ? 2 : 0;
 }
 
 /// 用戶揀咗 / 網上搵到嘅圖示，存喺 App 資料夾。

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -79,6 +80,37 @@ void main() {
     );
     expect(await lookup.download('$base/icon'), [1, 2, 3]);
     expect(await lookup.download('$base/missing'), isNull);
+  });
+
+  test('香港 App Store 寫中文名：用英文名都認到', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    server.listen((req) {
+      final zh = req.uri.queryParameters['lang'] == 'zh_hk';
+      if (req.uri.path == '/search') {
+        req.response.write(
+          jsonEncode({
+            'results': [
+              {
+                'trackName': zh ? '漫威未來之戰' : 'MARVEL Future Fight',
+                'artworkUrl100': 'https://is1-ssl.mzstatic.com/image/thumb/mff/AppIcon/100x100bb.jpg',
+              },
+            ],
+          }),
+        );
+      } else {
+        req.response.statusCode = 404;
+      }
+      req.response.close();
+    });
+    final base = 'http://127.0.0.1:${server.port}';
+    final lookup = AppIconLookup(appleBase: base, playBase: base);
+    addTearDown(lookup.close);
+    final found = await lookup.search('MARVEL Future Fight');
+    expect(found, hasLength(1));
+    expect(found.single.title, '漫威未來之戰');
+    expect(found.single.aliases, ['MARVEL Future Fight']);
+    expect(found.single.matches('MARVEL Future Fight'), true);
   });
 
   test('冇網就返回空', () async {
