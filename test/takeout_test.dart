@@ -16,6 +16,8 @@ final orderHistory = jsonEncode([
       'orderId': 'GPA.1111-2222-3333-44444',
       'creationTime': '2026-09-28T12:30:00.000Z',
       'totalPrice': r'HK$78.00',
+      'refundAmount': r'HK$0.00',
+      'billingInstrument': {'displayName': 'AlipayHK：852-12****34'},
       'lineItem': [
         {
           'doc': {'title': 'Genshin Impact: 300 創世結晶', 'documentType': 'In App Item'},
@@ -37,12 +39,26 @@ final orderHistory = jsonEncode([
   },
   {
     'orderHistory': {
+      'orderId': 'GPA.3333-4444-5555-66666',
+      'creationTime': '2026-09-20T08:00:00.000Z',
+      'totalPrice': r'HK$38.00',
+      'refundAmount': r'HK$38.00',
+      'lineItem': [
+        {
+          'doc': {'title': '退咗款'},
+        },
+      ],
+    },
+  },
+  {
+    'orderHistory': {
       'orderId': 'GPA.9999-0000-1111-22222',
       'creationTime': '2024-01-05T10:00:00.000Z',
       'totalPrice': r'US$4.99',
+      'billingInstrument': {'displayName': 'MasterCard-1234'},
       'lineItem': [
         {
-          'doc': {'title': 'Old Game'},
+          'doc': {'title': 'Old Game', 'documentType': 'Subscription'},
         },
       ],
     },
@@ -70,7 +86,7 @@ void main() {
     expect(parsePlayPrice('free'), isNull);
   });
 
-  test('Order History：讀訂單編號，略過免費', () {
+  test('Order History：讀訂單編號，略過免費同全數退款', () {
     final r = parseTakeoutJson(orderHistory)!;
     expect(r.hasOrderIds, true);
     expect(r.purchases, hasLength(2));
@@ -79,7 +95,17 @@ void main() {
     expect(p.title, 'Genshin Impact: 300 創世結晶');
     expect(p.amount, 7800);
     expect(p.at, DateTime.utc(2026, 9, 28, 12, 30).toLocal());
+    expect(p.paymentMethod, 'AlipayHK');
     expect(r.purchases.last.currency, 'USD');
+    expect(r.purchases.last.paymentMethod, 'Mastercard');
+  });
+
+  test('付款方法去走卡號同餘額', () {
+    expect(playPaymentMethod('Google Play 餘額：HK\$123.45'), 'Google Play 餘額');
+    expect(playPaymentMethod('Google Play 餘額: HK\$1.00'), 'Google Play 餘額');
+    expect(playPaymentMethod('Octopus Wallet：Mario'), 'Octopus Wallet');
+    expect(playPaymentMethod('SmarTone HK '), 'SmarTone HK');
+    expect(playPaymentMethod(''), isNull);
   });
 
   test('Purchase History 同其他 JSON', () {
@@ -130,6 +156,8 @@ void main() {
       expect(items, hasLength(1));
       final (raw, payment) = items.single;
       expect(payment.categoryHint, '娛樂 › 課金');
+      expect(raw.sourceKey, 'google-takeout:alipayhk');
+      expect(raw.sourceLabel, 'AlipayHK');
 
       // Gmail 收據遲幾分鐘到
       final email = RawCapture(
@@ -146,6 +174,7 @@ void main() {
 
       final all = takeoutToCaptures(purchases);
       expect(all, hasLength(2));
+      expect(all.last.$2.categoryHint, '娛樂 › 訂閱');
       expect(await service.ingestParsed(all.last.$1, all.last.$2, parsedBy: ParsedBy.rule), IngestOutcome.added);
     });
   });

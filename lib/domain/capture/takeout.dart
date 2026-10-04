@@ -25,6 +25,8 @@ class PlayPurchase {
     required this.amount,
     required this.currency,
     required this.at,
+    this.kind,
+    this.paymentMethod,
   });
 
   /// 訂單編號（GPA.…）；冇就用時間同名合成
@@ -35,6 +37,12 @@ class PlayPurchase {
   final int amount;
   final String currency;
   final DateTime at;
+
+  /// Google 嘅 documentType，例如 In App Item、Subscription、Android Apps
+  final String? kind;
+
+  /// 付款方法，已經去走卡號同餘額，例如「AlipayHK」、「Mastercard」、「Google Play 餘額」
+  final String? paymentMethod;
 }
 
 /// 讀 Takeout zip 或者單一 JSON 檔。檔名會因語言唔同，所以靠內容認：
@@ -87,7 +95,10 @@ Future<List<PlayPurchase>> readTakeout(String path) async {
           ?_purchase(
             id: o['orderId'] as String?,
             title: _orderTitle(o),
+            kind: _orderKind(o),
+            method: (o['billingInstrument'] as Map?)?['displayName'] as String?,
             price: o['totalPrice'] as String?,
+            refund: o['refundAmount'] as String?,
             time: o['creationTime'] as String?,
           ),
       ],
@@ -102,6 +113,8 @@ Future<List<PlayPurchase>> readTakeout(String path) async {
         ?_purchase(
           id: null,
           title: (p['doc'] as Map?)?['title'] as String?,
+          kind: (p['doc'] as Map?)?['documentType'] as String?,
+          method: p['paymentMethodTitle'] as String?,
           price: p['invoicePrice'] as String?,
           time: p['purchaseTime'] as String?,
         ),
@@ -117,17 +130,42 @@ String? _orderTitle(Map<String, dynamic> o) {
   return titles.isEmpty ? null : titles.join('、');
 }
 
-PlayPurchase? _purchase({String? id, String? title, String? price, String? time}) {
+String? _orderKind(Map<String, dynamic> o) => [
+  for (final li in (o['lineItem'] as List? ?? const []).whereType<Map<String, dynamic>>())
+    if ((li['doc'] as Map?)?['documentType'] case final String k) k,
+].firstOrNull;
+
+/// 「AlipayHK：852-12****34」→「AlipayHK」；「MasterCard-1234」→「Mastercard」。卡號同餘額唔留。
+String? playPaymentMethod(String? displayName) {
+  final name = displayName?.split(RegExp(r'[：:]|-\s*\d')).first.trim();
+  if (name == null || name.isEmpty) return null;
+  return name.toLowerCase() == 'mastercard' ? 'Mastercard' : name;
+}
+
+PlayPurchase? _purchase({
+  String? id,
+  String? title,
+  String? kind,
+  String? method,
+  String? price,
+  String? refund,
+  String? time,
+}) {
   final at = time == null ? null : DateTime.tryParse(time)?.toLocal();
   final money = price == null ? null : parsePlayPrice(price);
-  if (at == null || money == null || money.amount <= 0) return null;
+  if (at == null || money == null) return null;
+  // 退咗款嘅減返；全數退款就唔當消費
+  final amount = money.amount - (refund == null ? 0 : parsePlayPrice(refund)?.amount ?? 0);
+  if (amount <= 0) return null;
   final name = (title == null || title.trim().isEmpty) ? 'Google Play' : title.trim();
   return PlayPurchase(
     id: (id != null && id.isNotEmpty) ? id : '${at.toUtc().toIso8601String()}:${merchantKey(name)}',
     title: name,
-    amount: money.amount,
+    amount: amount,
     currency: money.currency,
     at: at,
+    kind: kind,
+    paymentMethod: playPaymentMethod(method),
   );
 }
 
@@ -175,13 +213,23 @@ List<(RawCapture, ParsedPayment)> takeoutToCaptures(List<PlayPurchase> purchases
       (
         RawCapture(
           source: EntrySource.import,
-          sourceKey: takeoutSourceKey,
-          sourceLabel: 'Google Play',
+          // 每個付款方法一個 key，咁樣 app 會分別記住 AlipayHK、信用卡等等對應邊個賬戶
+          sourceKey: p.paymentMethod == null ? takeoutSourceKey : '$takeoutSourceKey:${p.paymentMethod!.toLowerCase()}',
+          sourceLabel: p.paymentMethod ?? 'Google Play',
           externalId: 'takeout:${p.id}',
           title: 'Google Play 購買記錄',
           body: '${p.title} ${p.currency} ${(p.amount / 100).toStringAsFixed(2)}',
           occurredAt: p.at,
         ),
-        ParsedPayment(amount: p.amount, currency: p.currency, merchant: p.title, categoryHint: '娛樂 › 課金'),
+        ParsedPayment(
+          amount: p.amount,
+          currency: p.currency,
+          merchant: p.title,
+          categoryHint: switch (p.kind) {
+            'Subscription' => '娛樂 › 訂閱',
+            'Android Apps' => '娛樂 › 遊戲',
+            _ => '娛樂 › 課金',
+          },
+        ),
       ),
 ];
