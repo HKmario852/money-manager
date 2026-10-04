@@ -48,4 +48,10 @@ void main() {
       isNull,
     );
   });
+
+  test('揀 build 號最大嘅 release，唔理發佈次序', () {
+    final r = newestRelease([release(tag: 'build-14'), release(tag: 'build-15'), release(tag: 'build-11')]);
+    expect(r!.build, 15);
+    expect(newestRelease([]), isNull);
+  });
 }

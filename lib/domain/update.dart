@@ -37,7 +37,7 @@ class AppRelease {
   final String? sha256;
 }
 
-/// 讀 GitHub `releases/latest` 嘅回覆。冇 APK 或者格式唔啱返回 null。
+/// 讀一個 GitHub release。冇 APK 或者格式唔啱返回 null。
 AppRelease? parseRelease(Map<String, dynamic> json) {
   final tag = json['tag_name'] as String? ?? '';
   final build = int.tryParse(RegExp(r'build-(\d+)$').firstMatch(tag)?.group(1) ?? '');
@@ -57,6 +57,16 @@ AppRelease? parseRelease(Map<String, dynamic> json) {
     );
   }
   return null;
+}
+
+/// 由 release 列表揀 build 號最大嗰個。
+AppRelease? newestRelease(List<dynamic> releases) {
+  AppRelease? best;
+  for (final r in releases.whereType<Map<String, dynamic>>()) {
+    final parsed = parseRelease(r);
+    if (parsed != null && (best == null || parsed.build > best.build)) best = parsed;
+  }
+  return best;
 }
 
 /// GitHub 自動生成嘅更新內容有 Markdown 同連結，轉做一行行簡單文字。
@@ -84,7 +94,8 @@ class Updater {
 
   /// 最新版本；冇或者讀唔到返回 null。
   Future<AppRelease?> latest() async {
-    final uri = Uri.https('api.github.com', '/repos/$updateRepo/releases/latest');
+    // 唔用 releases/latest：兩次合併差唔多同時完成時，較舊嘅 build 可能遲啲先發佈而變成「latest」
+    final uri = Uri.https('api.github.com', '/repos/$updateRepo/releases', {'per_page': '10'});
     try {
       final req = await _client.getUrl(uri).timeout(const Duration(seconds: 15));
       req.headers.set(HttpHeaders.acceptHeader, 'application/vnd.github+json');
@@ -93,7 +104,7 @@ class Updater {
       final text = await res.transform(utf8.decoder).join();
       if (res.statusCode == 404) return null; // 未有 release
       if (res.statusCode != 200) throw UpdateException('檢查更新失敗（${res.statusCode}）');
-      return parseRelease(jsonDecode(text) as Map<String, dynamic>);
+      return newestRelease(jsonDecode(text) as List);
     } on UpdateException {
       rethrow;
     } on Exception catch (e) {
