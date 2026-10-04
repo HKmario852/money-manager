@@ -43,7 +43,7 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             PageHeader(
-              '記錄課金',
+              'Money Expense',
               overline: formatDate(DateTime.now()),
               actions: [
                 CircleAction(

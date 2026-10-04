@@ -24,7 +24,7 @@ class MoneyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '記錄課金',
+      title: 'Money Expense',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       locale: const Locale('zh', 'HK'),
@@ -260,7 +260,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   }
 
   Future<void> _unlock() async {
-    if (await authenticateUser('解鎖記錄課金')) {
+    if (await authenticateUser('解鎖 Money Expense')) {
       ref.read(unlockedProvider.notifier).set(true);
     }
   }
@@ -274,7 +274,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
           children: [
             const Icon(Icons.lock_outline, size: 64, color: AppColors.ink),
             const SizedBox(height: 16),
-            const Text('記錄課金已上鎖'),
+            const Text('Money Expense 已上鎖'),
             const SizedBox(height: 16),
             FilledButton.icon(onPressed: _unlock, icon: const Icon(Icons.fingerprint), label: const Text('解鎖')),
           ],
@@ -339,7 +339,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('歡迎使用記錄課金', style: theme.textTheme.headlineLarge, textAlign: TextAlign.center),
+            Text('歡迎使用 Money Expense', style: theme.textTheme.headlineLarge, textAlign: TextAlign.center),
             const SizedBox(height: 8),
             const Text('先設定基準貨幣同第一個賬戶，之後隨時可以加多啲。', textAlign: TextAlign.center),
             const SizedBox(height: 32),

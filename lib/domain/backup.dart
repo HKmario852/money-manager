@@ -7,7 +7,7 @@ import 'package:sqlite3/sqlite3.dart' as sql;
 import '../data/database.dart';
 
 const backupDbName = 'money_manager.sqlite';
-const _backupPrefix = '記錄課金備份_';
+const _backupPrefix = 'MoneyExpense_backup_';
 
 /// 備份檔有問題（唔係備份、壞咗、密碼唔啱）。
 class BackupException implements Exception {
@@ -60,7 +60,7 @@ Future<bool> isEncryptedBackup(String zipPath) async {
   try {
     final header = await raf.read(8);
     if (header.length < 8 || header[0] != 0x50 || header[1] != 0x4b || header[2] != 0x03 || header[3] != 0x04) {
-      throw const BackupException('呢個唔係記錄課金嘅備份檔');
+      throw const BackupException('呢個唔係 Money Expense 嘅備份檔');
     }
     return (header[6] & 0x1) != 0;
   } finally {
@@ -83,7 +83,7 @@ Future<String> unpackBackup(
       throw BackupException(password != null ? '密碼唔啱，或者備份檔壞咗' : '備份檔壞咗，開唔到');
     }
     final dbFile = File(p.join(out, backupDbName));
-    if (!await dbFile.exists()) throw const BackupException('呢個唔係記錄課金嘅備份檔');
+    if (!await dbFile.exists()) throw const BackupException('呢個唔係 Money Expense 嘅備份檔');
     validateBackupDatabase(dbFile.path, maxSchemaVersion: maxSchemaVersion);
     return out;
   } catch (_) {
@@ -93,7 +93,7 @@ Future<String> unpackBackup(
   }
 }
 
-/// 確認係完整、版本唔高過呢個 App 嘅記錄課金資料庫。
+/// 確認係完整、版本唔高過呢個 App 嘅 Money Expense 資料庫。
 void validateBackupDatabase(String path, {required int maxSchemaVersion}) {
   final sql.Database db;
   try {
@@ -109,7 +109,7 @@ void validateBackupDatabase(String path, {required int maxSchemaVersion}) {
         .map((r) => r['name'] as String)
         .toSet();
     const required = {'accounts', 'journal_entries', 'postings', 'settings'};
-    if (!tables.containsAll(required)) throw const BackupException('呢個唔係記錄課金嘅備份檔');
+    if (!tables.containsAll(required)) throw const BackupException('呢個唔係 Money Expense 嘅備份檔');
     final version = db.select('PRAGMA user_version').first.values.first as int;
     if (version > maxSchemaVersion) throw const BackupException('呢個備份係新版 App 整嘅，請先更新 App');
   } on BackupException {
