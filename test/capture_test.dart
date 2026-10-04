@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,7 +86,71 @@ void main() {
     expect(geminiErrorMessage(403, err(403, 'blocked', 'API_KEY_SERVICE_BLOCKED'), 'm'), contains('限制'));
     expect(geminiErrorMessage(400, err(400, 'Something else'), 'm'), 'Gemini 拒絕咗個請求（400）：Something else');
     expect(geminiErrorMessage(404, 'not json', 'gemini-x'), contains('gemini-x'));
-    expect(geminiErrorMessage(500, '', 'm'), 'Gemini 出錯（500）');
+    expect(geminiErrorMessage(502, '', 'm'), 'Gemini 出錯（502）');
+    expect(geminiErrorMessage(503, '', 'm'), contains('key 冇問題'));
+  });
+
+  group('Gemini 繁忙', () {
+    late HttpServer server;
+    late List<String> calls;
+    late List<int> statuses;
+
+    setUp(() async {
+      calls = [];
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((req) async {
+        calls.add(req.uri.path.split('/').last.split(':').first);
+        final status = statuses.removeAt(0);
+        req.response.statusCode = status;
+        req.response.write(
+          status == 200
+              ? jsonEncode({
+                  'candidates': [
+                    {
+                      'content': {
+                        'parts': [
+                          {'text': '{"is_payment":true,"direction":"expense","amount":38,"currency":"HKD"}'},
+                        ],
+                      },
+                    },
+                  ],
+                })
+              : jsonEncode({
+                  'error': {'code': status, 'message': 'The model is overloaded.'},
+                }),
+        );
+        await req.response.close();
+      });
+    });
+
+    tearDown(() => server.close(force: true));
+
+    GeminiParser parser() =>
+        GeminiParser(apiKey: 'k', baseUrl: 'http://127.0.0.1:${server.port}', retryDelay: Duration.zero);
+
+    test('503 會再試，再唔得轉後備模型', () async {
+      statuses = [503, 503, 200];
+      final p = await parser().parse(source: 'x', body: 'HK\$38', categories: const []);
+      expect(p!.amount, 3800);
+      expect(calls, [defaultGeminiModel, defaultGeminiModel, fallbackGeminiModel]);
+    });
+
+    test('一直繁忙就話 key 冇問題', () async {
+      statuses = [503, 503, 404];
+      await expectLater(
+        parser().parse(source: 'x', body: 'HK\$38', categories: const []),
+        throwsA(isA<GeminiException>().having((e) => e.message, 'message', contains('key 冇問題'))),
+      );
+    });
+
+    test('key 錯唔會再試', () async {
+      statuses = [400];
+      await expectLater(
+        parser().parse(source: 'x', body: 'HK\$38', categories: const []),
+        throwsA(isA<GeminiException>()),
+      );
+      expect(calls, hasLength(1));
+    });
   });
 
   test('八達通截圖 JSON 轉換', () {
