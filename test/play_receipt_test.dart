@@ -76,6 +76,20 @@ void main() {
     expect(readPlayReceipt('你購買了商品。\n總計：HK\$8.00').item, isNull);
   });
 
+  test('冇金額嘅 Play 電郵唔係付款', () {
+    final r = parseByRules(
+      sourceKey: 'googleplay-noreply@google.com',
+      title: '你的 Google One 訂閱將被取消',
+      body: '你的 Google One 訂閱將於 2026年10月30日 取消。',
+    );
+    expect(r.isPayment, false);
+  });
+
+  test('續訂收據同 Takeout 差 24 小時都靠訂單編號認到', () {
+    final text = receipt(order: 'SOP.3333-1234-5678-90123..1', item: 'Google One (Google One)', price: r'HK$40.00');
+    expect(readPlayReceipt(text.replaceAll('訂單編號', '訂單號碼')).orderId, 'SOP.3333-1234-5678-90123..1');
+  });
+
   group('入待確認', () {
     late AppDatabase db;
     late Ledger ledger;
@@ -167,6 +181,22 @@ void main() {
       expect(first.status, CaptureStatus.pending);
       expect((await byExternal('g:2')).status, CaptureStatus.duplicate);
       expect((await byExternal('takeout:GPA.9999-1234-5678-90123')).status, CaptureStatus.pending);
+
+      // 舊版本入咗嘅取消訂閱通知
+      await db
+          .into(db.captures)
+          .insert(
+            CapturesCompanion.insert(
+              source: EntrySource.email,
+              sourceKey: 'googleplay-noreply@google.com',
+              externalId: 'g:3',
+              title: const Value('你的 Google One 訂閱將被取消'),
+              body: '你的 Google One 訂閱將於 2026年10月30日 取消。',
+              occurredAt: at,
+            ),
+          );
+      expect(await service.repairPlayReceipts(), 1);
+      expect((await byExternal('g:3')).status, CaptureStatus.dismissed);
 
       // 再跑一次冇嘢要改
       expect(await service.repairPlayReceipts(), 0);
