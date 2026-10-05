@@ -28,21 +28,45 @@ class TaobaoException implements Exception {
   String toString() => message;
 }
 
+/// 訂單入面一件貨。
+class TaobaoItem {
+  const TaobaoItem(this.title, {this.qty = 1, this.priceFen, this.sku, this.imageUrl, this.url});
+  final String title;
+  final int qty;
+
+  /// 呢件貨實付（人民幣分），冇就 null
+  final int? priceFen;
+  final String? sku;
+  final String? imageUrl;
+
+  /// 商品頁
+  final String? url;
+
+  /// 「手機殼 ×2」
+  String get label => qty > 1 ? '$title ×$qty' : title;
+}
+
 /// 「已買到的寶貝」入面嘅一張訂單。
 class TaobaoOrder {
-  const TaobaoOrder({
+  TaobaoOrder({
     required this.id,
     required this.at,
     required this.shop,
-    required this.items,
+    List<String>? items,
+    this.lines = const [],
     required this.paidFen,
     required this.status,
-  });
+  }) : items = items ?? [for (final l in lines) l.label];
 
   final String id;
   final DateTime at;
   final String shop;
+
+  /// 每件貨一行字，例如「手機殼 ×2」
   final List<String> items;
+
+  /// 每件貨嘅詳情（名、款式、相）
+  final List<TaobaoItem> lines;
 
   /// 實付款（人民幣分）
   final int paidFen;
@@ -94,10 +118,17 @@ List<TaobaoOrder>? parseTaobaoExport(String text) {
         id: id,
         at: at,
         shop: '${o['shop'] ?? ''}'.trim(),
-        items: [
+        lines: [
           for (final i in (o['items'] as List? ?? const []).whereType<Map>())
             if ('${i['title'] ?? ''}'.trim() case final t when t.isNotEmpty)
-              (i['qty'] is num && (i['qty'] as num) > 1) ? '$t ×${i['qty']}' : t,
+              TaobaoItem(
+                t,
+                qty: i['qty'] is num && (i['qty'] as num) > 1 ? (i['qty'] as num).toInt() : 1,
+                priceFen: _fen('${i['price'] ?? ''}'),
+                sku: _blank('${i['sku'] ?? ''}'),
+                imageUrl: _imageUrl('${i['pic'] ?? ''}'),
+                url: _imageUrl('${i['url'] ?? ''}'),
+              ),
         ],
         paidFen: paid,
         status: status,
@@ -115,6 +146,9 @@ const _colShop = ['店铺名称', '店鋪名稱', '卖家', '賣家'];
 const _colTitle = ['商品名称', '商品名稱', '宝贝名称', '商品标题'];
 const _colQty = ['商品数量', '商品數量', '购买数量', '数量'];
 const _colPaid = ['实付金额', '實付金額', '实付款', '买家实付'];
+const _colSku = ['型号款式', '型號款式', '商品属性', '商品屬性'];
+const _colPrice = ['商品金额', '商品金額'];
+const _colLink = ['商品链接', '商品鏈接', '商品連結'];
 
 /// 淘寶「导出订单」Excel：每件貨一行；同一張單第二件貨起嗰幾行冇訂單號同實付。唔係呢種表就返回 null。
 List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
@@ -122,7 +156,7 @@ List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
   if (headerAt < 0) return null;
   final header = [for (final c in rows[headerAt]) c.trim()];
   int col(List<String> names) => header.indexWhere(names.contains);
-  final (iId, iTime, iStatus, iShop, iTitle, iQty, iPaid) = (
+  final (iId, iTime, iStatus, iShop, iTitle, iQty, iPaid, iSku, iPrice, iLink) = (
     col(_colId),
     col(_colTime),
     col(_colStatus),
@@ -130,6 +164,9 @@ List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
     col(_colTitle),
     col(_colQty),
     col(_colPaid),
+    col(_colSku),
+    col(_colPrice),
+    col(_colLink),
   );
   if (iTime < 0 || iPaid < 0) return null;
   String cell(List<String> r, int i) => i >= 0 && i < r.length ? r[i].trim() : '';
@@ -171,10 +208,16 @@ List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
         id: id,
         at: at,
         shop: cell(first, iShop),
-        items: [
+        lines: [
           for (final r in lines)
             if (cell(r, iTitle) case final t when t.isNotEmpty)
-              (int.tryParse(cell(r, iQty)) ?? 1) > 1 ? '$t ×${cell(r, iQty)}' : t,
+              TaobaoItem(
+                t,
+                qty: (int.tryParse(cell(r, iQty)) ?? 1).clamp(1, 1 << 30),
+                priceFen: _fen(cell(r, iPrice)),
+                sku: _blank(cell(r, iSku)),
+                url: _imageUrl(cell(r, iLink)),
+              ),
         ],
         paidFen: paid,
         status: status,
@@ -183,6 +226,42 @@ List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
   }
   return out;
 }
+
+String? _blank(String s) => s.trim().isEmpty ? null : s.trim();
+
+/// 淘寶網址（商品相、商品頁）：「//img…」補 https；唔係網址就 null
+String? _imageUrl(String s) {
+  final u = s.trim();
+  if (u.startsWith('//')) return 'https:$u';
+  return u.startsWith('https://') ? u : (u.startsWith('http://') ? 'https://${u.substring(7)}' : null);
+}
+
+/// 記低每張單嘅每件貨（再匯入會換新），睇訂單詳情用。
+Future<void> saveTaobaoItems(AppDatabase db, Iterable<TaobaoOrder> orders) => db.transaction(() async {
+  for (final o in orders) {
+    if (o.lines.isEmpty) continue;
+    final key = 'taobao:${o.id}';
+    await (db.delete(db.purchaseItems)..where((i) => i.captureExternalId.equals(key))).go();
+    await db.batch((b) {
+      for (final (n, l) in o.lines.indexed) {
+        b.insert(
+          db.purchaseItems,
+          PurchaseItemsCompanion.insert(
+            captureExternalId: key,
+            position: n,
+            title: l.title,
+            qty: Value(l.qty),
+            price: Value(l.priceFen),
+            currency: const Value('CNY'),
+            sku: Value(l.sku),
+            imageUrl: Value(l.imageUrl),
+            url: Value(l.url),
+          ),
+        );
+      }
+    });
+  }
+});
 
 /// 「¥68.90」「68.9」→ 6890
 int? _fen(String s) {

@@ -4771,6 +4771,526 @@ class CaptureRulesCompanion extends UpdateCompanion<CaptureRule> {
   }
 }
 
+class $PurchaseItemsTable extends PurchaseItems with TableInfo<$PurchaseItemsTable, PurchaseItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PurchaseItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _captureExternalIdMeta = const VerificationMeta('captureExternalId');
+  @override
+  late final GeneratedColumn<String> captureExternalId = GeneratedColumn<String>(
+    'capture_external_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta('position');
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _qtyMeta = const VerificationMeta('qty');
+  @override
+  late final GeneratedColumn<int> qty = GeneratedColumn<int>(
+    'qty',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _priceMeta = const VerificationMeta('price');
+  @override
+  late final GeneratedColumn<int> price = GeneratedColumn<int>(
+    'price',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _currencyMeta = const VerificationMeta('currency');
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _skuMeta = const VerificationMeta('sku');
+  @override
+  late final GeneratedColumn<String> sku = GeneratedColumn<String>(
+    'sku',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _imageUrlMeta = const VerificationMeta('imageUrl');
+  @override
+  late final GeneratedColumn<String> imageUrl = GeneratedColumn<String>(
+    'image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _urlMeta = const VerificationMeta('url');
+  @override
+  late final GeneratedColumn<String> url = GeneratedColumn<String>(
+    'url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    captureExternalId,
+    position,
+    title,
+    qty,
+    price,
+    currency,
+    sku,
+    imageUrl,
+    url,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'purchase_items';
+  @override
+  VerificationContext validateIntegrity(Insertable<PurchaseItem> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('capture_external_id')) {
+      context.handle(
+        _captureExternalIdMeta,
+        captureExternalId.isAcceptableOrUnknown(data['capture_external_id']!, _captureExternalIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_captureExternalIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(_positionMeta, position.isAcceptableOrUnknown(data['position']!, _positionMeta));
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(_titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('qty')) {
+      context.handle(_qtyMeta, qty.isAcceptableOrUnknown(data['qty']!, _qtyMeta));
+    }
+    if (data.containsKey('price')) {
+      context.handle(_priceMeta, price.isAcceptableOrUnknown(data['price']!, _priceMeta));
+    }
+    if (data.containsKey('currency')) {
+      context.handle(_currencyMeta, currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta));
+    }
+    if (data.containsKey('sku')) {
+      context.handle(_skuMeta, sku.isAcceptableOrUnknown(data['sku']!, _skuMeta));
+    }
+    if (data.containsKey('image_url')) {
+      context.handle(_imageUrlMeta, imageUrl.isAcceptableOrUnknown(data['image_url']!, _imageUrlMeta));
+    }
+    if (data.containsKey('url')) {
+      context.handle(_urlMeta, url.isAcceptableOrUnknown(data['url']!, _urlMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PurchaseItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PurchaseItem(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      captureExternalId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}capture_external_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}position'])!,
+      title: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      qty: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}qty'])!,
+      price: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}price']),
+      currency: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}currency']),
+      sku: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}sku']),
+      imageUrl: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}image_url']),
+      url: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}url']),
+    );
+  }
+
+  @override
+  $PurchaseItemsTable createAlias(String alias) {
+    return $PurchaseItemsTable(attachedDatabase, alias);
+  }
+}
+
+class PurchaseItem extends DataClass implements Insertable<PurchaseItem> {
+  final String id;
+  final String captureExternalId;
+  final int position;
+  final String title;
+  final int qty;
+
+  /// 原幣最細單位（例如人民幣分）
+  final int? price;
+  final String? currency;
+
+  /// 款式，例如「颜色分类：黑色」
+  final String? sku;
+
+  /// 商品相網址
+  final String? imageUrl;
+
+  /// 商品頁網址
+  final String? url;
+  const PurchaseItem({
+    required this.id,
+    required this.captureExternalId,
+    required this.position,
+    required this.title,
+    required this.qty,
+    this.price,
+    this.currency,
+    this.sku,
+    this.imageUrl,
+    this.url,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['capture_external_id'] = Variable<String>(captureExternalId);
+    map['position'] = Variable<int>(position);
+    map['title'] = Variable<String>(title);
+    map['qty'] = Variable<int>(qty);
+    if (!nullToAbsent || price != null) {
+      map['price'] = Variable<int>(price);
+    }
+    if (!nullToAbsent || currency != null) {
+      map['currency'] = Variable<String>(currency);
+    }
+    if (!nullToAbsent || sku != null) {
+      map['sku'] = Variable<String>(sku);
+    }
+    if (!nullToAbsent || imageUrl != null) {
+      map['image_url'] = Variable<String>(imageUrl);
+    }
+    if (!nullToAbsent || url != null) {
+      map['url'] = Variable<String>(url);
+    }
+    return map;
+  }
+
+  PurchaseItemsCompanion toCompanion(bool nullToAbsent) {
+    return PurchaseItemsCompanion(
+      id: Value(id),
+      captureExternalId: Value(captureExternalId),
+      position: Value(position),
+      title: Value(title),
+      qty: Value(qty),
+      price: price == null && nullToAbsent ? const Value.absent() : Value(price),
+      currency: currency == null && nullToAbsent ? const Value.absent() : Value(currency),
+      sku: sku == null && nullToAbsent ? const Value.absent() : Value(sku),
+      imageUrl: imageUrl == null && nullToAbsent ? const Value.absent() : Value(imageUrl),
+      url: url == null && nullToAbsent ? const Value.absent() : Value(url),
+    );
+  }
+
+  factory PurchaseItem.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PurchaseItem(
+      id: serializer.fromJson<String>(json['id']),
+      captureExternalId: serializer.fromJson<String>(json['captureExternalId']),
+      position: serializer.fromJson<int>(json['position']),
+      title: serializer.fromJson<String>(json['title']),
+      qty: serializer.fromJson<int>(json['qty']),
+      price: serializer.fromJson<int?>(json['price']),
+      currency: serializer.fromJson<String?>(json['currency']),
+      sku: serializer.fromJson<String?>(json['sku']),
+      imageUrl: serializer.fromJson<String?>(json['imageUrl']),
+      url: serializer.fromJson<String?>(json['url']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'captureExternalId': serializer.toJson<String>(captureExternalId),
+      'position': serializer.toJson<int>(position),
+      'title': serializer.toJson<String>(title),
+      'qty': serializer.toJson<int>(qty),
+      'price': serializer.toJson<int?>(price),
+      'currency': serializer.toJson<String?>(currency),
+      'sku': serializer.toJson<String?>(sku),
+      'imageUrl': serializer.toJson<String?>(imageUrl),
+      'url': serializer.toJson<String?>(url),
+    };
+  }
+
+  PurchaseItem copyWith({
+    String? id,
+    String? captureExternalId,
+    int? position,
+    String? title,
+    int? qty,
+    Value<int?> price = const Value.absent(),
+    Value<String?> currency = const Value.absent(),
+    Value<String?> sku = const Value.absent(),
+    Value<String?> imageUrl = const Value.absent(),
+    Value<String?> url = const Value.absent(),
+  }) => PurchaseItem(
+    id: id ?? this.id,
+    captureExternalId: captureExternalId ?? this.captureExternalId,
+    position: position ?? this.position,
+    title: title ?? this.title,
+    qty: qty ?? this.qty,
+    price: price.present ? price.value : this.price,
+    currency: currency.present ? currency.value : this.currency,
+    sku: sku.present ? sku.value : this.sku,
+    imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
+    url: url.present ? url.value : this.url,
+  );
+  PurchaseItem copyWithCompanion(PurchaseItemsCompanion data) {
+    return PurchaseItem(
+      id: data.id.present ? data.id.value : this.id,
+      captureExternalId: data.captureExternalId.present ? data.captureExternalId.value : this.captureExternalId,
+      position: data.position.present ? data.position.value : this.position,
+      title: data.title.present ? data.title.value : this.title,
+      qty: data.qty.present ? data.qty.value : this.qty,
+      price: data.price.present ? data.price.value : this.price,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      sku: data.sku.present ? data.sku.value : this.sku,
+      imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
+      url: data.url.present ? data.url.value : this.url,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PurchaseItem(')
+          ..write('id: $id, ')
+          ..write('captureExternalId: $captureExternalId, ')
+          ..write('position: $position, ')
+          ..write('title: $title, ')
+          ..write('qty: $qty, ')
+          ..write('price: $price, ')
+          ..write('currency: $currency, ')
+          ..write('sku: $sku, ')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('url: $url')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, captureExternalId, position, title, qty, price, currency, sku, imageUrl, url);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PurchaseItem &&
+          other.id == this.id &&
+          other.captureExternalId == this.captureExternalId &&
+          other.position == this.position &&
+          other.title == this.title &&
+          other.qty == this.qty &&
+          other.price == this.price &&
+          other.currency == this.currency &&
+          other.sku == this.sku &&
+          other.imageUrl == this.imageUrl &&
+          other.url == this.url);
+}
+
+class PurchaseItemsCompanion extends UpdateCompanion<PurchaseItem> {
+  final Value<String> id;
+  final Value<String> captureExternalId;
+  final Value<int> position;
+  final Value<String> title;
+  final Value<int> qty;
+  final Value<int?> price;
+  final Value<String?> currency;
+  final Value<String?> sku;
+  final Value<String?> imageUrl;
+  final Value<String?> url;
+  final Value<int> rowid;
+  const PurchaseItemsCompanion({
+    this.id = const Value.absent(),
+    this.captureExternalId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.title = const Value.absent(),
+    this.qty = const Value.absent(),
+    this.price = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.sku = const Value.absent(),
+    this.imageUrl = const Value.absent(),
+    this.url = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PurchaseItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required String captureExternalId,
+    required int position,
+    required String title,
+    this.qty = const Value.absent(),
+    this.price = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.sku = const Value.absent(),
+    this.imageUrl = const Value.absent(),
+    this.url = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : captureExternalId = Value(captureExternalId),
+       position = Value(position),
+       title = Value(title);
+  static Insertable<PurchaseItem> custom({
+    Expression<String>? id,
+    Expression<String>? captureExternalId,
+    Expression<int>? position,
+    Expression<String>? title,
+    Expression<int>? qty,
+    Expression<int>? price,
+    Expression<String>? currency,
+    Expression<String>? sku,
+    Expression<String>? imageUrl,
+    Expression<String>? url,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (captureExternalId != null) 'capture_external_id': captureExternalId,
+      if (position != null) 'position': position,
+      if (title != null) 'title': title,
+      if (qty != null) 'qty': qty,
+      if (price != null) 'price': price,
+      if (currency != null) 'currency': currency,
+      if (sku != null) 'sku': sku,
+      if (imageUrl != null) 'image_url': imageUrl,
+      if (url != null) 'url': url,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PurchaseItemsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? captureExternalId,
+    Value<int>? position,
+    Value<String>? title,
+    Value<int>? qty,
+    Value<int?>? price,
+    Value<String?>? currency,
+    Value<String?>? sku,
+    Value<String?>? imageUrl,
+    Value<String?>? url,
+    Value<int>? rowid,
+  }) {
+    return PurchaseItemsCompanion(
+      id: id ?? this.id,
+      captureExternalId: captureExternalId ?? this.captureExternalId,
+      position: position ?? this.position,
+      title: title ?? this.title,
+      qty: qty ?? this.qty,
+      price: price ?? this.price,
+      currency: currency ?? this.currency,
+      sku: sku ?? this.sku,
+      imageUrl: imageUrl ?? this.imageUrl,
+      url: url ?? this.url,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (captureExternalId.present) {
+      map['capture_external_id'] = Variable<String>(captureExternalId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (qty.present) {
+      map['qty'] = Variable<int>(qty.value);
+    }
+    if (price.present) {
+      map['price'] = Variable<int>(price.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (sku.present) {
+      map['sku'] = Variable<String>(sku.value);
+    }
+    if (imageUrl.present) {
+      map['image_url'] = Variable<String>(imageUrl.value);
+    }
+    if (url.present) {
+      map['url'] = Variable<String>(url.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PurchaseItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('captureExternalId: $captureExternalId, ')
+          ..write('position: $position, ')
+          ..write('title: $title, ')
+          ..write('qty: $qty, ')
+          ..write('price: $price, ')
+          ..write('currency: $currency, ')
+          ..write('sku: $sku, ')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('url: $url, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4785,6 +5305,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $CapturesTable captures = $CapturesTable(this);
   late final $CaptureRulesTable captureRules = $CaptureRulesTable(this);
+  late final $PurchaseItemsTable purchaseItems = $PurchaseItemsTable(this);
   late final Index idxEntriesOccurredAt = Index(
     'idx_entries_occurred_at',
     'CREATE INDEX idx_entries_occurred_at ON journal_entries (occurred_at)',
@@ -4801,6 +5322,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'idx_captures_status',
     'CREATE INDEX idx_captures_status ON captures (status)',
   );
+  late final Index idxPurchaseItemsCapture = Index(
+    'idx_purchase_items_capture',
+    'CREATE INDEX idx_purchase_items_capture ON purchase_items (capture_external_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -4816,10 +5341,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     settings,
     captures,
     captureRules,
+    purchaseItems,
     idxEntriesOccurredAt,
     idxPostingsAccount,
     idxPostingsEntry,
     idxCapturesStatus,
+    idxPurchaseItemsCapture,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -9082,6 +9609,236 @@ typedef $$CaptureRulesTableProcessedTableManager =
       CaptureRule,
       PrefetchHooks Function({bool categoryId, bool fundAccountId})
     >;
+typedef $$PurchaseItemsTableCreateCompanionBuilder = PurchaseItemsCompanion Function({
+  Value<String> id,
+  required String captureExternalId,
+  required int position,
+  required String title,
+  Value<int> qty,
+  Value<int?> price,
+  Value<String?> currency,
+  Value<String?> sku,
+  Value<String?> imageUrl,
+  Value<String?> url,
+  Value<int> rowid,
+});
+typedef $$PurchaseItemsTableUpdateCompanionBuilder = PurchaseItemsCompanion Function({
+  Value<String> id,
+  Value<String> captureExternalId,
+  Value<int> position,
+  Value<String> title,
+  Value<int> qty,
+  Value<int?> price,
+  Value<String?> currency,
+  Value<String?> sku,
+  Value<String?> imageUrl,
+  Value<String?> url,
+  Value<int> rowid,
+});
+
+class $$PurchaseItemsTableFilterComposer extends Composer<_$AppDatabase, $PurchaseItemsTable> {
+  $$PurchaseItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get captureExternalId =>
+      $composableBuilder(column: $table.captureExternalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get qty => $composableBuilder(column: $table.qty, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get price => $composableBuilder(column: $table.price, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sku => $composableBuilder(column: $table.sku, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get imageUrl =>
+      $composableBuilder(column: $table.imageUrl, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get url => $composableBuilder(column: $table.url, builder: (column) => ColumnFilters(column));
+}
+
+class $$PurchaseItemsTableOrderingComposer extends Composer<_$AppDatabase, $PurchaseItemsTable> {
+  $$PurchaseItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get captureExternalId =>
+      $composableBuilder(column: $table.captureExternalId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get qty => $composableBuilder(column: $table.qty, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get price =>
+      $composableBuilder(column: $table.price, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sku =>
+      $composableBuilder(column: $table.sku, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get imageUrl =>
+      $composableBuilder(column: $table.imageUrl, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get url =>
+      $composableBuilder(column: $table.url, builder: (column) => ColumnOrderings(column));
+}
+
+class $$PurchaseItemsTableAnnotationComposer extends Composer<_$AppDatabase, $PurchaseItemsTable> {
+  $$PurchaseItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get captureExternalId =>
+      $composableBuilder(column: $table.captureExternalId, builder: (column) => column);
+
+  GeneratedColumn<int> get position => $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get title => $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<int> get qty => $composableBuilder(column: $table.qty, builder: (column) => column);
+
+  GeneratedColumn<int> get price => $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<String> get currency => $composableBuilder(column: $table.currency, builder: (column) => column);
+
+  GeneratedColumn<String> get sku => $composableBuilder(column: $table.sku, builder: (column) => column);
+
+  GeneratedColumn<String> get imageUrl => $composableBuilder(column: $table.imageUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get url => $composableBuilder(column: $table.url, builder: (column) => column);
+}
+
+class $$PurchaseItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PurchaseItemsTable,
+          PurchaseItem,
+          $$PurchaseItemsTableFilterComposer,
+          $$PurchaseItemsTableOrderingComposer,
+          $$PurchaseItemsTableAnnotationComposer,
+          $$PurchaseItemsTableCreateCompanionBuilder,
+          $$PurchaseItemsTableUpdateCompanionBuilder,
+          (PurchaseItem, BaseReferences<_$AppDatabase, $PurchaseItemsTable, PurchaseItem>),
+          PurchaseItem,
+          PrefetchHooks Function()
+        > {
+  $$PurchaseItemsTableTableManager(_$AppDatabase db, $PurchaseItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$PurchaseItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$PurchaseItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$PurchaseItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> captureExternalId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<int> qty = const Value.absent(),
+                Value<int?> price = const Value.absent(),
+                Value<String?> currency = const Value.absent(),
+                Value<String?> sku = const Value.absent(),
+                Value<String?> imageUrl = const Value.absent(),
+                Value<String?> url = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PurchaseItemsCompanion(
+                id: id,
+                captureExternalId: captureExternalId,
+                position: position,
+                title: title,
+                qty: qty,
+                price: price,
+                currency: currency,
+                sku: sku,
+                imageUrl: imageUrl,
+                url: url,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String captureExternalId,
+                required int position,
+                required String title,
+                Value<int> qty = const Value.absent(),
+                Value<int?> price = const Value.absent(),
+                Value<String?> currency = const Value.absent(),
+                Value<String?> sku = const Value.absent(),
+                Value<String?> imageUrl = const Value.absent(),
+                Value<String?> url = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PurchaseItemsCompanion.insert(
+                id: id,
+                captureExternalId: captureExternalId,
+                position: position,
+                title: title,
+                qty: qty,
+                price: price,
+                currency: currency,
+                sku: sku,
+                imageUrl: imageUrl,
+                url: url,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PurchaseItemsTable, PurchaseItem>(table),
+                  BaseReferences<_$AppDatabase, $PurchaseItemsTable, PurchaseItem>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PurchaseItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PurchaseItemsTable,
+      PurchaseItem,
+      $$PurchaseItemsTableFilterComposer,
+      $$PurchaseItemsTableOrderingComposer,
+      $$PurchaseItemsTableAnnotationComposer,
+      $$PurchaseItemsTableCreateCompanionBuilder,
+      $$PurchaseItemsTableUpdateCompanionBuilder,
+      (PurchaseItem, BaseReferences<_$AppDatabase, $PurchaseItemsTable, PurchaseItem>),
+      PurchaseItem,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9097,4 +9854,5 @@ class $AppDatabaseManager {
   $$SettingsTableTableManager get settings => $$SettingsTableTableManager(_db, _db.settings);
   $$CapturesTableTableManager get captures => $$CapturesTableTableManager(_db, _db.captures);
   $$CaptureRulesTableTableManager get captureRules => $$CaptureRulesTableTableManager(_db, _db.captureRules);
+  $$PurchaseItemsTableTableManager get purchaseItems => $$PurchaseItemsTableTableManager(_db, _db.purchaseItems);
 }

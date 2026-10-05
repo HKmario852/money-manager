@@ -201,6 +201,32 @@ class CaptureRules extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// 匯入訂單入面嘅每件貨（例如淘寶），用嚟睇買咗乜。[captureExternalId] 對應 [Captures.externalId]。
+@TableIndex(name: 'idx_purchase_items_capture', columns: {#captureExternalId})
+class PurchaseItems extends Table {
+  TextColumn get id => text().clientDefault(newId)();
+  TextColumn get captureExternalId => text()();
+  IntColumn get position => integer()();
+  TextColumn get title => text()();
+  IntColumn get qty => integer().withDefault(const Constant(1))();
+
+  /// 原幣最細單位（例如人民幣分）
+  IntColumn get price => integer().nullable()();
+  TextColumn get currency => text().nullable()();
+
+  /// 款式，例如「颜色分类：黑色」
+  TextColumn get sku => text().nullable()();
+
+  /// 商品相網址
+  TextColumn get imageUrl => text().nullable()();
+
+  /// 商品頁網址
+  TextColumn get url => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Settings extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
@@ -222,13 +248,14 @@ class Settings extends Table {
     Settings,
     Captures,
     CaptureRules,
+    PurchaseItems,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -243,6 +270,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createIndex(idxCapturesStatus);
       }
       if (from < 3) await moveTaobaoToOwnCategory(this);
+      if (from < 4) {
+        await m.createTable(purchaseItems);
+        await m.createIndex(idxPurchaseItemsCapture);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

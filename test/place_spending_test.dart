@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' show DatabaseConnection;
@@ -15,6 +16,31 @@ import 'package:money_manager/ui/place_spending_screen.dart';
 import 'package:money_manager/ui/theme.dart';
 
 // 假資料，唔係真訂單
+final _export = jsonEncode({
+  'format': 'money-expense-taobao',
+  'version': 1,
+  'orders': [
+    {
+      'id': '9',
+      'time': '2026-09-01 10:00:00',
+      'shop': '測試小店',
+      'items': [
+        {
+          'title': '手機殼',
+          'qty': 2,
+          'price': '58.90',
+          'sku': '黑色',
+          'pic': '//img.alicdn.com/a.jpg',
+          'url': 'https://item.taobao.com/item.htm?id=1',
+        },
+        {'title': '數據線', 'qty': 1, 'price': '10.00'},
+      ],
+      'paid': '68.90',
+      'status': '交易成功',
+    },
+  ],
+});
+
 void main() {
   test('按地方分：淘寶按店、Google Play 按 App、其他按商戶', () async {
     final db = AppDatabase(NativeDatabase.memory());
@@ -66,26 +92,32 @@ void main() {
     expect(places[2].parts, isEmpty);
   });
 
-  test('淘寶單入帳之後讀得返買咗乜', () async {
+  test('淘寶單入帳之後讀得返買咗乜同相', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     final ledger = Ledger(db);
     final service = CaptureService(ledger);
     final wallet = await ledger.createFundAccount(name: '錢包', type: AccountType.asset, subtype: AccountSubtype.ewallet);
-    final order = TaobaoOrder(
-      id: '9',
-      at: DateTime(2026, 9, 1),
-      shop: '測試小店',
-      items: ['手機殼 ×2', '數據線'],
-      paidFen: 6890,
-      status: '交易成功',
-    );
+    final order = parseTaobaoExport(_export)!.single;
+    await saveTaobaoItems(db, [order]);
     final (raw, p) = taobaoToCaptures([order], rate: 1.0).single;
     await service.ingestParsed(raw, p);
     final c = await (db.select(db.captures)..where((x) => x.externalId.equals('taobao:9'))).getSingle();
-    final shopping = (await db.select(db.accounts).get()).firstWhere((a) => a.name == '購物').id;
-    final entryId = await service.confirm(c, categoryId: shopping, fundId: wallet);
-    expect(await loadBoughtItems(db), {entryId: '手機殼 ×2、數據線'});
+    final entryId = await service.confirm(c, fundId: wallet);
+
+    final info = (await loadOrderInfo(db))[entryId]!;
+    expect(info.orderId, '9');
+    expect(info.summary, '手機殼 ×2、數據線');
+    expect(info.original, '¥68.90 × 1.0000');
+    expect(info.imageUrl, 'https://img.alicdn.com/a.jpg');
+    expect(info.items.map((i) => (i.title, i.qty, i.price, i.sku, i.url)), [
+      ('手機殼', 2, 5890, '黑色', 'https://item.taobao.com/item.htm?id=1'),
+      ('數據線', 1, 1000, null, null),
+    ]);
+
+    // 再匯入：換新唔重複
+    await saveTaobaoItems(db, [order]);
+    expect(await db.select(db.purchaseItems).get(), hasLength(2));
   });
 
   testWidgets('邊度使錢：撳淘寶睇每間店，再撳店睇買咗乜', (tester) async {
@@ -105,9 +137,17 @@ void main() {
       );
       final now = DateTime.now();
       final orders = [
-        TaobaoOrder(id: '1', at: now, shop: '測試小店', items: ['手機殼'], paidFen: 3000, status: '交易成功'),
+        TaobaoOrder(
+          id: '1',
+          at: now,
+          shop: '測試小店',
+          lines: [const TaobaoItem('手機殼', priceFen: 3000)],
+          paidFen: 3000,
+          status: '交易成功',
+        ),
         TaobaoOrder(id: '2', at: now, shop: '另一間', items: ['杯'], paidFen: 1000, status: '交易成功'),
       ];
+      await saveTaobaoItems(db, orders);
       for (final (raw, p) in taobaoToCaptures(orders, rate: 1.0)) {
         await service.ingestParsed(raw, p);
       }
@@ -138,6 +178,10 @@ void main() {
     await settle();
     expect(find.text('手機殼'), findsOneWidget);
     expect(find.text('杯'), findsNothing);
+    await tester.tap(find.text('手機殼'));
+    await settle();
+    expect(find.text('訂單號 1'), findsOneWidget);
+    expect(find.text('×1 · ¥30.00'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(db.close);
