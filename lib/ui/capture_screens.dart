@@ -9,8 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import '../data/database.dart';
 import '../domain/capture/capture_service.dart';
 import '../domain/capture/gemini.dart';
+import '../domain/capture/parser.dart';
 import '../domain/capture/sources.dart';
 import '../domain/capture/takeout.dart';
+import '../domain/capture/taobao.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
@@ -610,6 +612,27 @@ class _AutoCaptureSettingsScreenState extends ConsumerState<AutoCaptureSettingsS
           ),
           const SizedBox(height: 6),
           SectionCard(
+            title: '淘寶訂單',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  '1. 電腦開淘寶「已買到的寶貝」→ 撳「导出订单」→ 下载订单（一次最多 10 頁）\n'
+                  '2. 將「订单数据.xlsx」放去 Google Drive 或者手機\n'
+                  '3. 撳下面個掣揀個檔案。交易關閉嘅會略過，匯入過嘅唔會重複。',
+                  style: TextStyle(fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => importTaobao(context, ref),
+                  icon: const Icon(Icons.upload_file, size: 18),
+                  label: const Text('匯入淘寶訂單'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          SectionCard(
             title: 'Gemini 解析',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -861,7 +884,81 @@ Future<void> importTakeout(BuildContext context, WidgetRef ref) async {
   }
   if (!context.mounted) return;
 
-  final items = takeoutToCaptures(purchases, since: cutoff);
+  await _runImport(context, ref, takeoutToCaptures(purchases, since: cutoff));
+}
+
+/// 揀淘寶「导出订单」嘅 Excel，換做港幣後放入待確認。
+Future<void> importTaobao(BuildContext context, WidgetRef ref) async {
+  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx']);
+  final path = picked.firstOrNull?.path;
+  if (path == null || !context.mounted) return;
+  final List<TaobaoOrder> orders;
+  try {
+    orders = await readTaobaoExport(path);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+    return;
+  }
+  final paid = orders.where((o) => !o.isClosed && o.paidFen > 0).toList();
+  if (!context.mounted) return;
+  if (paid.isEmpty) {
+    showError(context, '入面冇已付款嘅淘寶訂單');
+    return;
+  }
+
+  final db = ref.read(databaseProvider);
+  final since = await ref.read(captureSyncProvider).appStartedAt();
+  final older = since == null ? 0 : paid.where((o) => o.at.isBefore(since)).length;
+  final rate = TextEditingController(
+    text: double.tryParse(await db.getSetting(SettingKeys.taobaoCnyRate) ?? '')?.toString() ?? '$defaultCnyToHkd',
+  );
+  if (!context.mounted) return;
+  final totalFen = paid.fold(0, (s, o) => s + o.paidFen);
+  final choice = await showDialog<bool>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text('搵到 ${paid.length} 張訂單'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '實付合共 ￥${(totalFen / 100).toStringAsFixed(2)}'
+            '${orders.length > paid.length ? '（${orders.length - paid.length} 張交易關閉，略過）' : ''}',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: rate,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: '人民幣兌港幣匯率', helperText: '例如 1.09：￥100 記做 HK\$109'),
+          ),
+          if (older > 0) ...[
+            const SizedBox(height: 12),
+            Text('其中 $older 張係 ${formatDate(since!, withYear: true)} 開始用 app 之前。'),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+        if (older > 0) TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('全部匯入')),
+        FilledButton(onPressed: () => Navigator.pop(c, false), child: Text(older > 0 ? '只入之後' : '匯入')),
+      ],
+    ),
+  );
+  final cny = double.tryParse(rate.text.trim());
+  rate.dispose();
+  if (choice == null || !context.mounted) return;
+  if (cny == null || cny <= 0 || cny > 10) {
+    showError(context, '匯率唔啱');
+    return;
+  }
+  await db.setSetting(SettingKeys.taobaoCnyRate, '$cny');
+  if (!context.mounted) return;
+  await _runImport(context, ref, taobaoToCaptures(orders, cnyToHkd: cny, since: choice ? null : since));
+}
+
+/// 將已解析好嘅記錄放入待確認，顯示進度同結果（Takeout、淘寶共用）。
+Future<void> _runImport(BuildContext context, WidgetRef ref, List<(RawCapture, ParsedPayment)> items) async {
   final job = ref.read(captureSyncProvider).importTakeout(items);
   final report = await showDialog<SyncReport>(
     context: context,

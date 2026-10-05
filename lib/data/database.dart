@@ -278,6 +278,9 @@ abstract final class SettingKeys {
 
   /// Gemini 模型名
   static const geminiModel = 'gemini_model';
+
+  /// 淘寶訂單匯入：上次用嘅人民幣兌港幣匯率
+  static const taobaoCnyRate = 'taobao_cny_rate';
   static const updateLastCheck = 'update_last_check';
   static const updateSkippedBuild = 'update_skipped_build';
 }
