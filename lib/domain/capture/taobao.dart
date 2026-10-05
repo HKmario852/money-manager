@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
+
 import '../../data/database.dart';
 import '../money.dart';
 import '../xlsx.dart';
@@ -12,6 +14,9 @@ const taobaoSourceKey = 'taobao';
 
 /// 淘寶訂單 extension 匯出嘅檔案格式名。
 const taobaoExportFormat = 'money-expense-taobao';
+
+/// 淘寶訂單入嘅分類：購物 › 淘寶，統計入面可以分開睇。
+const taobaoCategoryPath = '購物 › 淘寶';
 
 /// 淘寶訂單金額係人民幣，換算港幣後同錢包通知嘅金額可能差少少，呢個範圍內當同一筆。
 const taobaoAmountTolerance = 0.03;
@@ -227,7 +232,7 @@ List<(RawCapture, ParsedPayment)> taobaoToCaptures(
             ParsedPayment(
               amount: (o.paidFen * r).round(),
               merchant: o.shop.isEmpty ? '淘寶' : o.shop,
-              categoryHint: '購物',
+              categoryHint: taobaoCategoryPath,
             ),
           ),
   ];
@@ -319,3 +324,50 @@ Future<DailyRates?> fetchCnyHkdHistory(DateTime from, DateTime to, {HttpClient? 
   }
   return rates.isEmpty ? null : DailyRates(rates);
 }
+
+/// 舊版將淘寶訂單入咗「購物」：開「購物 › 淘寶」，將淘寶匯入嘅記錄、待確認同店舖規則由「購物」搬過去。
+/// 用戶自己揀咗其他分類嘅唔郁。冇「購物」或者冇淘寶記錄就乜都唔做。
+Future<void> moveTaobaoToOwnCategory(AppDatabase db) => db.transaction(() async {
+  final expense = await (db.select(db.accounts)..where((a) => a.type.equalsValue(AccountType.expense))).get();
+  final shopping = expense.where((a) => a.parentId == null && a.name == '購物' && a.deletedAt == null).firstOrNull;
+  if (shopping == null) return;
+  final captures = await (db.select(db.captures)..where((c) => c.sourceKey.equals(taobaoSourceKey))).get();
+  var taobao = expense.where((a) => a.parentId == shopping.id && a.name == '淘寶' && a.deletedAt == null).firstOrNull?.id;
+  if (taobao == null) {
+    if (captures.isEmpty) return;
+    final last = expense
+        .where((a) => a.parentId == shopping.id)
+        .map((a) => a.sortOrder)
+        .fold(-1, (a, b) => a > b ? a : b);
+    taobao = newId();
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: Value(taobao),
+            name: '淘寶',
+            type: AccountType.expense,
+            parentId: Value(shopping.id),
+            icon: const Value('shopping'),
+            color: Value(shopping.color),
+            sortOrder: Value(last + 1),
+          ),
+        );
+  }
+  final merchants = <String>{};
+  for (final c in captures) {
+    if (c.categoryId != shopping.id) continue;
+    if (c.entryId case final entryId?) {
+      await (db.update(db.postings)..where((p) => p.entryId.equals(entryId) & p.accountId.equals(shopping.id))).write(
+        PostingsCompanion(accountId: Value(taobao)),
+      );
+    }
+    await (db.update(db.captures)..where((x) => x.id.equals(c.id))).write(CapturesCompanion(categoryId: Value(taobao)));
+    if (c.merchant case final m?) merchants.add('m:${merchantKey(m)}');
+  }
+  if (merchants.isNotEmpty) {
+    await (db.update(db.captureRules)..where((r) => r.key.isIn(merchants) & r.categoryId.equals(shopping.id))).write(
+      CaptureRulesCompanion(categoryId: Value(taobao)),
+    );
+  }
+});

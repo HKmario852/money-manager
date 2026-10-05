@@ -1,3 +1,5 @@
+import '../domain/capture/taobao.dart' show moveTaobaoToOwnCategory;
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -226,7 +228,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -240,6 +242,7 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(captureRules);
         await m.createIndex(idxCapturesStatus);
       }
+      if (from < 3) await moveTaobaoToOwnCategory(this);
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

@@ -65,7 +65,7 @@ void main() {
     expect(payment.amount, 7476); // 68.90 × 1.085 = 74.7565
     expect(payment.currency, 'HKD');
     expect(payment.merchant, '測試小店');
-    expect(payment.categoryHint, '購物');
+    expect(payment.categoryHint, '購物 › 淘寶');
   });
 
   group('當日匯率', () {
@@ -259,6 +259,57 @@ void main() {
       expect((await byId('taobao:3001')).amount, 8268);
       expect((await ledger.transaction(b))!.amount, 999);
       expect((await ledger.balances())[wallet], -(8268 + 999));
+    });
+
+    test('匯入嘅淘寶單建議入「購物 › 淘寶」', () async {
+      final (raw, p) = taobaoToCaptures(parseTaobaoExport(export)!, rate: 1.0).first;
+      await service.ingestParsed(raw, p);
+      final taobao = await db.select(db.accounts).get().then((all) {
+        final shopping = all.firstWhere((a) => a.name == '購物' && a.parentId == null);
+        return all.firstWhere((a) => a.name == '淘寶' && a.parentId == shopping.id);
+      });
+      expect((await byId('taobao:3001')).categoryId, taobao.id);
+    });
+
+    test('舊記錄由「購物」搬去「購物 › 淘寶」；用戶揀過其他分類嘅唔郁', () async {
+      final ledger = Ledger(db);
+      final all = await db.select(db.accounts).get();
+      final shopping = all.firstWhere((a) => a.name == '購物' && a.parentId == null).id;
+      final daily = all.firstWhere((a) => a.name == '日用品').id;
+      // 模擬舊版：冇「淘寶」子分類
+      await (db.delete(db.accounts)..where((a) => a.name.equals('淘寶'))).go();
+      final wallet = await ledger.createFundAccount(
+        name: 'AlipayHK',
+        type: AccountType.asset,
+        subtype: AccountSubtype.ewallet,
+      );
+      final items = taobaoToCaptures(parseTaobaoExport(export)!, rate: 1.0);
+      for (final (raw, p) in items) {
+        await service.ingestParsed(raw, p);
+      }
+      final a = await service.confirm(await byId('taobao:3001'), categoryId: shopping, fundId: wallet);
+      final b = await service.confirm(await byId('taobao:3005'), categoryId: daily, fundId: wallet);
+      final manual = await ledger.saveEntry(
+        EntryDraft(
+          kind: EntryKind.expense,
+          amount: 100,
+          fromAccountId: wallet,
+          toAccountId: shopping,
+          occurredAt: DateTime(2026, 10, 1),
+        ),
+      );
+
+      await moveTaobaoToOwnCategory(db);
+      await moveTaobaoToOwnCategory(db); // 再行一次都冇事
+
+      final taobao = (await (db.select(db.accounts)..where((x) => x.name.equals('淘寶'))).get()).single;
+      expect(taobao.parentId, shopping);
+      expect((await ledger.transaction(a))!.to.id, taobao.id);
+      expect((await ledger.transaction(b))!.to.id, daily);
+      expect((await ledger.transaction(manual))!.to.id, shopping);
+      expect((await byId('taobao:3001')).categoryId, taobao.id);
+      final rule = await (db.select(db.captureRules)..where((r) => r.key.equals('m:測試小店'))).getSingleOrNull();
+      expect(rule?.categoryId, taobao.id);
     });
 
     test('AlipayHK 通知先到：淘寶估算金額差少少都當重複', () async {
