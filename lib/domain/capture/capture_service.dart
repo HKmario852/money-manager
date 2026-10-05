@@ -47,7 +47,17 @@ RawCapture playReceiptCapture(RawCapture raw) {
   );
 }
 
-enum IngestOutcome { added, autoConfirmed, duplicate, notPayment, alreadySeen, needsGemini }
+enum IngestOutcome {
+  added,
+  autoConfirmed,
+  duplicate,
+  notPayment,
+  alreadySeen,
+  needsGemini,
+
+  /// 再匯入：未確認嗰筆嘅金額改咗（例如換咗匯率）
+  updated,
+}
 
 /// 唔同來源報同一筆錢（例如 AlipayHK 通知 + Play 收據電郵），喺呢個時間內當重複。
 const duplicateWindow = Duration(minutes: 30);
@@ -88,15 +98,26 @@ class CaptureService {
     return _store(raw, payment, parsedBy, accounts, autoConfirm: autoConfirm);
   }
 
-  /// 已經解析好嘅記錄（例如 Gemini 讀八達通截圖）。
+  /// 已經解析好嘅記錄（例如 Gemini 讀八達通截圖）。[refreshPending]：之前匯入過但未確認嘅，用新金額同內容更新。
   Future<IngestOutcome> ingestParsed(
     RawCapture raw,
     ParsedPayment payment, {
     ParsedBy parsedBy = ParsedBy.gemini,
     bool autoConfirm = false,
+    bool refreshPending = false,
   }) async {
     final seen = await (db.select(db.captures)..where((c) => c.externalId.equals(raw.externalId))).getSingleOrNull();
-    if (seen != null) return IngestOutcome.alreadySeen;
+    if (seen != null) {
+      if (!refreshPending ||
+          seen.status != CaptureStatus.pending ||
+          (seen.amount == payment.amount && seen.body == raw.body)) {
+        return IngestOutcome.alreadySeen;
+      }
+      await (db.update(db.captures)..where((c) => c.id.equals(seen.id))).write(
+        CapturesCompanion(amount: Value(payment.amount), currency: Value(payment.currency), body: Value(raw.body)),
+      );
+      return IngestOutcome.updated;
+    }
     final accounts = await (db.select(db.accounts)..where((a) => a.deletedAt.isNull())).get();
     return _store(raw, payment, parsedBy, accounts, autoConfirm: autoConfirm);
   }

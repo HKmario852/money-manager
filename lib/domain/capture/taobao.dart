@@ -198,32 +198,70 @@ DateTime? _parseTime(String s) {
   return DateTime(n(1), n(2), n(3), n(4), n(5), n(6));
 }
 
-/// 轉做待確認嘅捕捉，金額用 [rate]（1 人民幣 = 幾多港幣）換做港幣。[since] 之前嘅略過。
-List<(RawCapture, ParsedPayment)> taobaoToCaptures(List<TaobaoOrder> orders, {required double rate, DateTime? since}) {
+/// 轉做待確認嘅捕捉，金額換做港幣：有 [daily] 就用訂單當日匯率，冇就用 [rate]（1 人民幣 = 幾多港幣）。
+/// [since] 之前嘅略過。
+List<(RawCapture, ParsedPayment)> taobaoToCaptures(
+  List<TaobaoOrder> orders, {
+  required double rate,
+  DailyRates? daily,
+  DateTime? since,
+}) {
   String rmb(int fen) => '¥${(fen / 100).toStringAsFixed(2)}';
   return [
     for (final o in orders)
       if (since == null || !o.at.isBefore(since))
-        (
-          RawCapture(
-            source: EntrySource.import,
-            sourceKey: taobaoSourceKey,
-            sourceLabel: '淘寶',
-            externalId: 'taobao:${o.id}',
-            title: o.shop.isEmpty ? '淘寶訂單' : o.shop,
-            body: [
-              if (o.items.isNotEmpty) o.items.join('、'),
-              '${rmb(o.paidFen)} × ${rate.toStringAsFixed(4)}',
-            ].join('\n'),
-            occurredAt: o.at,
+        if (daily?.on(o.at) ?? rate case final r)
+          (
+            RawCapture(
+              source: EntrySource.import,
+              sourceKey: taobaoSourceKey,
+              sourceLabel: '淘寶',
+              externalId: 'taobao:${o.id}',
+              title: o.shop.isEmpty ? '淘寶訂單' : o.shop,
+              body: [
+                if (o.items.isNotEmpty) o.items.join('、'),
+                '${rmb(o.paidFen)} × ${r.toStringAsFixed(4)}',
+              ].join('\n'),
+              occurredAt: o.at,
+            ),
+            ParsedPayment(
+              amount: (o.paidFen * r).round(),
+              merchant: o.shop.isEmpty ? '淘寶' : o.shop,
+              categoryHint: '購物',
+            ),
           ),
-          ParsedPayment(
-            amount: (o.paidFen * rate).round(),
-            merchant: o.shop.isEmpty ? '淘寶' : o.shop,
-            categoryHint: '購物',
-          ),
-        ),
   ];
+}
+
+/// 每日人民幣兌港幣匯率。冇嗰日（例如假期）就用之前最近一日；比最早一日仲早就用最早一日。
+class DailyRates {
+  DailyRates(Map<DateTime, double> rates)
+    : _days = (rates.keys.map(_day).toList()..sort()),
+      _rates = {for (final MapEntry(:key, :value) in rates.entries) _day(key): value};
+
+  final List<DateTime> _days;
+  final Map<DateTime, double> _rates;
+
+  bool get isEmpty => _days.isEmpty;
+
+  static DateTime _day(DateTime t) => DateTime(t.year, t.month, t.day);
+
+  /// [at] 嗰日嘅匯率；一個都冇就返回 null。
+  double? on(DateTime at) {
+    if (_days.isEmpty) return null;
+    final day = _day(at);
+    // 搵最後一個唔遲過 [day] 嘅日子
+    var lo = 0, hi = _days.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (_days[mid].isAfter(day)) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return _rates[_days[lo == 0 ? 0 : lo - 1]];
+  }
 }
 
 /// 人民幣兌港幣匯率（1 人民幣 = 幾多港幣）。攞唔到返回 null。
@@ -243,4 +281,41 @@ Future<double?> fetchCnyToHkd({HttpClient? client, Uri? url}) async {
   } finally {
     if (client == null) http.close(force: true);
   }
+}
+
+/// 由 [from] 到 [to] 每日嘅人民幣兌港幣匯率（歐洲央行公佈，經 frankfurter.dev），只傳日子同幣種。
+/// 每年問一次；全部攞唔到返回 null，攞到部分就用部分。
+Future<DailyRates?> fetchCnyHkdHistory(DateTime from, DateTime to, {HttpClient? client, Uri? base}) async {
+  final http = client ?? (HttpClient()..connectionTimeout = const Duration(seconds: 8));
+  final api = base ?? Uri.parse('https://api.frankfurter.dev/v1/');
+  String ymd(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  final rates = <DateTime, double>{};
+  try {
+    // 早幾日開始，令頭一張單之前都有個交易日
+    for (var start = from.subtract(const Duration(days: 7)); !start.isAfter(to);) {
+      final end = DateTime(start.year, 12, 31).isAfter(to) ? to : DateTime(start.year, 12, 31);
+      final url = api.resolve('${ymd(start)}..${ymd(end)}').replace(queryParameters: {'base': 'CNY', 'symbols': 'HKD'});
+      final req = await http.getUrl(url);
+      final res = await req.close().timeout(const Duration(seconds: 15));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(await res.transform(utf8.decoder).join());
+        final byDay = data is Map ? data['rates'] : null;
+        if (byDay is Map) {
+          for (final MapEntry(:key, :value) in byDay.entries) {
+            final day = DateTime.tryParse('$key');
+            final rate = value is Map ? value['HKD'] : null;
+            if (day != null && rate is num && rate > 0.8 && rate < 1.5) rates[day] = rate.toDouble();
+          }
+        }
+      } else {
+        await res.drain<void>();
+      }
+      start = DateTime(end.year + 1);
+    }
+  } catch (_) {
+    // 用住攞到嘅
+  } finally {
+    if (client == null) http.close(force: true);
+  }
+  return rates.isEmpty ? null : DailyRates(rates);
 }

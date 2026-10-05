@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:archive/archive.dart';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:money_manager/data/database.dart';
@@ -64,6 +66,54 @@ void main() {
     expect(payment.currency, 'HKD');
     expect(payment.merchant, '測試小店');
     expect(payment.categoryHint, '購物');
+  });
+
+  group('當日匯率', () {
+    final daily = DailyRates({DateTime(2017, 3, 17): 1.12, DateTime(2017, 3, 20): 1.13, DateTime(2026, 10, 2): 1.17});
+
+    test('冇嗰日就用之前最近一日；太早用最早一日', () {
+      expect(daily.on(DateTime(2017, 3, 20, 23, 59)), 1.13);
+      expect(daily.on(DateTime(2017, 3, 19)), 1.12); // 星期日
+      expect(daily.on(DateTime(2017, 1, 1)), 1.12);
+      expect(daily.on(DateTime(2026, 10, 5)), 1.17);
+      expect(DailyRates({}).on(DateTime(2026)), isNull);
+    });
+
+    test('每張單用自己嗰日嘅匯率', () {
+      final items = taobaoToCaptures(parseTaobaoExport(export)!, rate: 1.5, daily: daily);
+      expect(items.map((i) => i.$2.amount), [8061, 565]); // 68.90 × 1.17、5.00 × 1.13
+      expect(items.first.$1.body, contains('¥68.90 × 1.1700'));
+    });
+
+    test('攞歷史匯率：逐年問，壞數略過', () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final asked = <String>[];
+      server.listen((req) async {
+        asked.add('${req.uri.pathSegments.last}?${req.uri.query}');
+        final year = req.uri.pathSegments.last.substring(0, 4);
+        req.response
+          ..headers.contentType = ContentType.json
+          ..write(
+            jsonEncode({
+              'base': 'CNY',
+              'rates': {
+                '$year-06-01': {'HKD': year == '2025' ? 1.09 : 1.15},
+                '$year-06-02': {'HKD': 9.9},
+              },
+            }),
+          );
+        await req.response.close();
+      });
+      final rates = await fetchCnyHkdHistory(
+        DateTime(2024, 3, 20),
+        DateTime(2025, 10, 5),
+        base: Uri.parse('http://127.0.0.1:${server.port}/v1/'),
+      );
+      await server.close(force: true);
+      expect(asked, ['2024-03-13..2024-12-31?base=CNY&symbols=HKD', '2025-01-01..2025-10-05?base=CNY&symbols=HKD']);
+      expect(rates!.on(DateTime(2024, 12, 1)), 1.15);
+      expect(rates.on(DateTime(2025, 7, 1)), 1.09);
+    });
   });
 
   group('淘寶「导出订单」Excel', () {
@@ -159,6 +209,29 @@ void main() {
       for (final (raw, p) in items) {
         expect(await service.ingestParsed(raw, p), IngestOutcome.alreadySeen);
       }
+    });
+
+    test('再匯入：未確認嘅改用新匯率，已確認嘅唔郁', () async {
+      final orders = parseTaobaoExport(export)!;
+      for (final (raw, p) in taobaoToCaptures(orders, rate: 1.0)) {
+        await service.ingestParsed(raw, p);
+      }
+      await (db.update(db.captures)..where((c) => c.externalId.equals('taobao:3005'))).write(
+        const CapturesCompanion(status: Value(CaptureStatus.confirmed)),
+      );
+      final again = [
+        for (final (raw, p) in taobaoToCaptures(orders, rate: 1.2))
+          await service.ingestParsed(raw, p, refreshPending: true),
+      ];
+      expect(again, [IngestOutcome.updated, IngestOutcome.alreadySeen]);
+      final a = await byId('taobao:3001');
+      expect(a.amount, 8268);
+      expect(a.body, contains('× 1.2000'));
+      expect((await byId('taobao:3005')).amount, 500);
+      // 冇 refreshPending 就唔郁
+      final (raw, p) = taobaoToCaptures(orders, rate: 1.3).first;
+      expect(await service.ingestParsed(raw, p), IngestOutcome.alreadySeen);
+      expect((await byId('taobao:3001')).amount, 8268);
     });
 
     test('AlipayHK 通知先到：淘寶估算金額差少少都當重複', () async {
