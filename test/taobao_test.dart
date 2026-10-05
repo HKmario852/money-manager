@@ -211,7 +211,7 @@ void main() {
       }
     });
 
-    test('再匯入：未確認嘅改用新匯率，已確認嘅唔郁', () async {
+    test('再匯入：未確認嘅改用新匯率，冇帳目嘅已確認唔郁', () async {
       final orders = parseTaobaoExport(export)!;
       for (final (raw, p) in taobaoToCaptures(orders, rate: 1.0)) {
         await service.ingestParsed(raw, p);
@@ -232,6 +232,33 @@ void main() {
       final (raw, p) = taobaoToCaptures(orders, rate: 1.3).first;
       expect(await service.ingestParsed(raw, p), IngestOutcome.alreadySeen);
       expect((await byId('taobao:3001')).amount, 8268);
+    });
+
+    test('再匯入：已入帳而冇改過金額嘅連帳目一齊改；改過嘅唔郁', () async {
+      final ledger = Ledger(db);
+      final wallet = await ledger.createFundAccount(
+        name: 'AlipayHK',
+        type: AccountType.asset,
+        subtype: AccountSubtype.ewallet,
+      );
+      final shopping = (await (db.select(db.accounts)..where((a) => a.name.equals('購物'))).get()).first.id;
+      final orders = parseTaobaoExport(export)!;
+      for (final (raw, p) in taobaoToCaptures(orders, rate: 1.0)) {
+        await service.ingestParsed(raw, p);
+      }
+      final a = await service.confirm(await byId('taobao:3001'), categoryId: shopping, fundId: wallet);
+      // 3005：用戶入帳時自己改咗金額
+      final b = await service.confirm(await byId('taobao:3005'), categoryId: shopping, fundId: wallet, amount: 999);
+
+      final again = [
+        for (final (raw, p) in taobaoToCaptures(orders, rate: 1.2))
+          await service.ingestParsed(raw, p, refreshPending: true),
+      ];
+      expect(again, [IngestOutcome.updated, IngestOutcome.alreadySeen]);
+      expect((await ledger.transaction(a))!.amount, 8268);
+      expect((await byId('taobao:3001')).amount, 8268);
+      expect((await ledger.transaction(b))!.amount, 999);
+      expect((await ledger.balances())[wallet], -(8268 + 999));
     });
 
     test('AlipayHK 通知先到：淘寶估算金額差少少都當重複', () async {
