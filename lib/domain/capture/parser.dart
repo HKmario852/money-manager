@@ -45,6 +45,7 @@ const knownSources = <String, String>{
   'com.hsbc.hsbchkmobilebanking': 'HSBC',
   'googleplay-noreply@google.com': 'Google Play',
   octopusScreenshotKey: '八達通',
+  'taobao': '淘寶',
 };
 
 /// 八達通 App 截圖匯入嘅來源 key。

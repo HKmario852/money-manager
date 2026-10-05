@@ -405,7 +405,7 @@ class CaptureSync {
     return (await (db.selectOnly(db.accounts)..addColumns([first])).getSingle()).read(first);
   }
 
-  /// Google Takeout 嘅 Play 購買記錄：格式固定，唔使 Gemini。
+  /// 固定格式嘅匯入（Google Takeout 嘅 Play 購買、淘寶訂單）：唔使 Gemini。
   Future<SyncReport> importTakeout(List<(RawCapture, ParsedPayment)> items) async {
     final report = SyncReport(errors: []);
     final service = ref.read(captureServiceProvider);
