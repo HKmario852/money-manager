@@ -271,9 +271,12 @@ final pendingCapturesProvider = StreamProvider<List<Capture>>((ref) {
 
 /// 一次同步嘅結果。
 class SyncReport {
-  SyncReport({this.added = 0, this.autoConfirmed = 0, this.skipped = 0, this.errors = const []});
+  SyncReport({this.added = 0, this.autoConfirmed = 0, this.updated = 0, this.skipped = 0, this.errors = const []});
   int added;
   int autoConfirmed;
+
+  /// 再匯入時更新咗金額嘅待確認
+  int updated;
 
   /// 已經匯入過或者同其他記錄重複
   int skipped;
@@ -406,16 +409,24 @@ class CaptureSync {
   }
 
   /// 固定格式嘅匯入（Google Takeout 嘅 Play 購買、淘寶訂單）：唔使 Gemini。
-  Future<SyncReport> importTakeout(List<(RawCapture, ParsedPayment)> items) async {
+  Future<SyncReport> importTakeout(List<(RawCapture, ParsedPayment)> items, {bool refreshPending = false}) async {
     final report = SyncReport(errors: []);
     final service = ref.read(captureServiceProvider);
     final auto = await ref.read(databaseProvider).getSetting(SettingKeys.autoConfirm) == 'true';
     for (final (raw, payment) in items) {
-      switch (await service.ingestParsed(raw, payment, parsedBy: ParsedBy.rule, autoConfirm: auto)) {
+      switch (await service.ingestParsed(
+        raw,
+        payment,
+        parsedBy: ParsedBy.rule,
+        autoConfirm: auto,
+        refreshPending: refreshPending,
+      )) {
         case IngestOutcome.added:
           report.added++;
         case IngestOutcome.autoConfirmed:
           report.autoConfirmed++;
+        case IngestOutcome.updated:
+          report.updated++;
         default:
           report.skipped++;
       }

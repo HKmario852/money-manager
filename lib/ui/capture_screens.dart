@@ -926,20 +926,87 @@ Future<void> importTaobao(BuildContext context, WidgetRef ref) async {
   }
   if (!context.mounted) return;
 
+  final picks = [
+    for (final o in orders)
+      if (cutoff == null || !o.at.isBefore(cutoff)) o,
+  ];
+  if (picks.isEmpty) {
+    showError(context, '揀咗嘅時間入面冇訂單');
+    return;
+  }
+  final first = picks.map((o) => o.at).reduce((a, b) => a.isBefore(b) ? a : b);
   final db = ref.read(databaseProvider);
   final saved = double.tryParse(await db.getSetting(SettingKeys.cnyHkdRate) ?? '');
-  final live = await fetchCnyToHkd();
   if (!context.mounted) return;
-  final rate = await _askRate(context, live ?? saved ?? defaultCnyHkdRate, live: live != null);
-  if (rate == null || !context.mounted) return;
-  await db.setSetting(SettingKeys.cnyHkdRate, '$rate');
+  final (live, daily) = await _whileWaiting(
+    context,
+    (fetchCnyToHkd(), fetchCnyHkdHistory(first, DateTime.now())).wait,
+    '攞緊匯率…',
+  );
   if (!context.mounted) return;
+
+  // 有歷史匯率就預設用每張單當日嘅匯率
+  var useDaily = false;
+  if (daily != null) {
+    final choice = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('人民幣換港幣'),
+        content: Text(
+          '每張單用落單嗰日嘅匯率（歐洲央行公佈），例如 '
+          '${formatDate(first, withYear: true)}：1 人民幣 = ${daily.on(first)!.toStringAsFixed(4)} 港幣。'
+          '\n\n之前匯入咗但未確認嘅單會改用新金額。',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('用一個匯率')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('用當日匯率')),
+        ],
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    useDaily = choice;
+  }
+  var rate = live ?? saved ?? defaultCnyHkdRate;
+  if (!useDaily) {
+    final asked = await _askRate(context, rate, live: live != null);
+    if (asked == null || !context.mounted) return;
+    rate = asked;
+    await db.setSetting(SettingKeys.cnyHkdRate, '$rate');
+    if (!context.mounted) return;
+  }
   await _runImport(
     context,
     ref,
-    taobaoToCaptures(orders, rate: rate, since: cutoff),
+    taobaoToCaptures(picks, rate: rate, daily: useDaily ? daily : null),
     nothing: '冇新嘅訂單',
+    refreshPending: true,
   );
+}
+
+/// 做 [job] 期間顯示一個轉圈嘅對話框。
+Future<T> _whileWaiting<T>(BuildContext context, Future<T> job, String text) async {
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (c) => PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Expanded(child: Text(text)),
+          ],
+        ),
+      ),
+    ),
+  );
+  try {
+    return await job;
+  } finally {
+    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+  }
 }
 
 /// 冇網又未用過時嘅預設匯率（1 人民幣兌港幣）。
@@ -990,8 +1057,9 @@ Future<void> _runImport(
   WidgetRef ref,
   List<(RawCapture, ParsedPayment)> items, {
   required String nothing,
+  bool refreshPending = false,
 }) async {
-  final job = ref.read(captureSyncProvider).importTakeout(items);
+  final job = ref.read(captureSyncProvider).importTakeout(items, refreshPending: refreshPending);
   final report = await showDialog<SyncReport>(
     context: context,
     barrierDismissible: false,
@@ -1019,18 +1087,19 @@ Future<void> _runImport(
   final msg = [
     if (report.added > 0) '新增 ${report.added} 筆待確認',
     if (report.autoConfirmed > 0) '自動入帳 ${report.autoConfirmed} 筆',
+    if (report.updated > 0) '${report.updated} 筆待確認改咗金額',
     if (report.skipped > 0) '${report.skipped} 筆之前匯入過或者已經記咗，略過',
     ...report.errors,
   ];
   await showDialog<void>(
     context: context,
     builder: (c) => AlertDialog(
-      title: Text(report.added + report.autoConfirmed > 0 ? '匯入完成' : nothing),
+      title: Text(report.added + report.autoConfirmed + report.updated > 0 ? '匯入完成' : nothing),
       content: Text(msg.isEmpty ? '揀咗嘅時間入面冇購買' : msg.join('\n')),
       actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('好'))],
     ),
   );
-  if (report.added > 0 && context.mounted) {
+  if (report.added + report.updated > 0 && context.mounted) {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen()));
   }
 }
