@@ -55,7 +55,7 @@ enum IngestOutcome {
   alreadySeen,
   needsGemini,
 
-  /// 再匯入：未確認嗰筆嘅金額改咗（例如換咗匯率）
+  /// 再匯入：之前嗰筆嘅金額改咗（例如換咗匯率）
   updated,
 }
 
@@ -98,7 +98,8 @@ class CaptureService {
     return _store(raw, payment, parsedBy, accounts, autoConfirm: autoConfirm);
   }
 
-  /// 已經解析好嘅記錄（例如 Gemini 讀八達通截圖）。[refreshPending]：之前匯入過但未確認嘅，用新金額同內容更新。
+  /// 已經解析好嘅記錄（例如 Gemini 讀八達通截圖）。[refreshPending]：之前匯入過嘅用新金額同內容更新，
+  /// 未確認嘅直接改；已入帳而用戶冇改過金額嘅，連帳目一齊改（例如換咗匯率）。
   Future<IngestOutcome> ingestParsed(
     RawCapture raw,
     ParsedPayment payment, {
@@ -108,19 +109,41 @@ class CaptureService {
   }) async {
     final seen = await (db.select(db.captures)..where((c) => c.externalId.equals(raw.externalId))).getSingleOrNull();
     if (seen != null) {
-      if (!refreshPending ||
-          seen.status != CaptureStatus.pending ||
-          (seen.amount == payment.amount && seen.body == raw.body)) {
+      if (!refreshPending || (seen.amount == payment.amount && seen.body == raw.body)) {
         return IngestOutcome.alreadySeen;
       }
-      await (db.update(db.captures)..where((c) => c.id.equals(seen.id))).write(
-        CapturesCompanion(amount: Value(payment.amount), currency: Value(payment.currency), body: Value(raw.body)),
-      );
-      return IngestOutcome.updated;
+      return await _refresh(seen, raw, payment) ? IngestOutcome.updated : IngestOutcome.alreadySeen;
     }
     final accounts = await (db.select(db.accounts)..where((a) => a.deletedAt.isNull())).get();
     return _store(raw, payment, parsedBy, accounts, autoConfirm: autoConfirm);
   }
+
+  Future<bool> _refresh(Capture seen, RawCapture raw, ParsedPayment payment) => db.transaction(() async {
+    final newAmount = payment.amount;
+    if (seen.status == CaptureStatus.confirmed && seen.entryId != null && newAmount > 0) {
+      final entry = await (db.select(
+        db.journalEntries,
+      )..where((e) => e.id.equals(seen.entryId!) & e.deletedAt.isNull())).getSingleOrNull();
+      final lines = await (db.select(db.postings)..where((p) => p.entryId.equals(seen.entryId!))).get();
+      // 用戶自己改過金額或者拆過分錄就唔郁
+      if (entry == null || lines.length != 2 || lines.any((l) => l.amount.abs() != seen.amount)) return false;
+      for (final l in lines) {
+        final amount = l.amount.sign * newAmount;
+        await (db.update(
+          db.postings,
+        )..where((p) => p.id.equals(l.id))).write(PostingsCompanion(amount: Value(amount), baseAmount: Value(amount)));
+      }
+      await (db.update(
+        db.journalEntries,
+      )..where((e) => e.id.equals(entry.id))).write(JournalEntriesCompanion(updatedAt: Value(DateTime.now())));
+    } else if (seen.status != CaptureStatus.pending) {
+      return false;
+    }
+    await (db.update(db.captures)..where((c) => c.id.equals(seen.id))).write(
+      CapturesCompanion(amount: Value(newAmount), currency: Value(payment.currency), body: Value(raw.body)),
+    );
+    return true;
+  });
 
   Future<IngestOutcome> _store(
     RawCapture raw,

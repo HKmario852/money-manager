@@ -12,7 +12,7 @@ const _expense = <_Cat>[
     [('早餐', 'breakfast'), ('午餐', 'lunch'), ('晚餐', 'dinner'), ('外賣', 'delivery'), ('飲品', 'drink'), ('零食', 'snack')],
   ),
   ('交通', 'transport', 0xFF1E88E5, [('港鐵', 'train'), ('巴士', 'bus'), ('的士', 'taxi'), ('加油', 'fuel'), ('泊車', 'parking')]),
-  ('購物', 'shopping', 0xFFD81B60, [('日用品', 'basket'), ('衫褲鞋襪', 'clothes'), ('電子產品', 'devices')]),
+  ('購物', 'shopping', 0xFFD81B60, [('日用品', 'basket'), ('衫褲鞋襪', 'clothes'), ('電子產品', 'devices'), ('淘寶', 'shopping')]),
   ('住屋', 'home', 0xFF6D4C41, [('租金', 'home'), ('管理費', 'building'), ('水電煤', 'bolt'), ('上網', 'wifi')]),
   ('娛樂', 'game', 0xFF8E24AA, [('電影', 'movie'), ('遊戲', 'game'), ('課金', 'diamond'), ('訂閱', 'subscription')]),
   ('醫療', 'medical', 0xFFE53935, [('睇醫生', 'medical'), ('藥物', 'pill')]),

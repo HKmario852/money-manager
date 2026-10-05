@@ -275,7 +275,7 @@ class SyncReport {
   int added;
   int autoConfirmed;
 
-  /// 再匯入時更新咗金額嘅待確認
+  /// 再匯入時更新咗金額嘅記錄（待確認或者已入帳）
   int updated;
 
   /// 已經匯入過或者同其他記錄重複

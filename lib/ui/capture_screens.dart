@@ -955,7 +955,7 @@ Future<void> importTaobao(BuildContext context, WidgetRef ref) async {
         content: Text(
           '每張單用落單嗰日嘅匯率（歐洲央行公佈），例如 '
           '${formatDate(first, withYear: true)}：1 人民幣 = ${daily.on(first)!.toStringAsFixed(4)} 港幣。'
-          '\n\n之前匯入咗但未確認嘅單會改用新金額。',
+          '\n\n之前匯入咗嘅單（包括已入帳、冇改過金額嘅）會改用新金額。',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
@@ -1087,7 +1087,7 @@ Future<void> _runImport(
   final msg = [
     if (report.added > 0) '新增 ${report.added} 筆待確認',
     if (report.autoConfirmed > 0) '自動入帳 ${report.autoConfirmed} 筆',
-    if (report.updated > 0) '${report.updated} 筆待確認改咗金額',
+    if (report.updated > 0) '${report.updated} 筆改咗金額',
     if (report.skipped > 0) '${report.skipped} 筆之前匯入過或者已經記咗，略過',
     ...report.errors,
   ];
@@ -1099,7 +1099,7 @@ Future<void> _runImport(
       actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('好'))],
     ),
   );
-  if (report.added + report.updated > 0 && context.mounted) {
+  if (report.added > 0 && context.mounted) {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const CaptureInboxScreen()));
   }
 }
