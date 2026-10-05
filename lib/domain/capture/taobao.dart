@@ -111,7 +111,7 @@ const _colTitle = ['商品名称', '商品名稱', '宝贝名称', '商品标题
 const _colQty = ['商品数量', '商品數量', '购买数量', '数量'];
 const _colPaid = ['实付金额', '實付金額', '实付款', '买家实付'];
 
-/// 淘寶「导出订单」Excel：每件貨一行，同一張單有幾行。唔係呢種表就返回 null。
+/// 淘寶「导出订单」Excel：每件貨一行；同一張單第二件貨起嗰幾行冇訂單號同實付。唔係呢種表就返回 null。
 List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
   final headerAt = rows.indexWhere((r) => r.any((c) => _colId.contains(c.trim())));
   if (headerAt < 0) return null;
@@ -130,11 +130,21 @@ List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
   String cell(List<String> r, int i) => i >= 0 && i < r.length ? r[i].trim() : '';
 
   final byOrder = <String, List<List<String>>>{};
+  String? last;
   for (final r in rows.skip(headerAt + 1)) {
     final id = cell(r, iId);
+    if (id.isEmpty) {
+      // 同一張單嘅第二件貨起：淘寶淨係寫商品，冇訂單號同實付
+      if (last != null && cell(r, iTitle).isNotEmpty) byOrder[last]!.add(r);
+      continue;
+    }
     // 太長嘅訂單號存咗做數字會變「1.23E+18」，用唔到
-    if (id.isEmpty || id.contains('E+')) continue;
+    if (id.contains('E+')) {
+      last = null;
+      continue;
+    }
     byOrder.putIfAbsent(id, () => []).add(r);
+    last = id;
   }
 
   final out = <TaobaoOrder>[];
@@ -142,11 +152,14 @@ List<TaobaoOrder>? parseTaobaoXlsx(List<List<String>> rows) {
     final first = lines.first;
     final status = cell(first, iStatus);
     final at = _parseTime(cell(first, iTime)) ?? _excelTime(cell(first, iTime));
-    final paidEach = [for (final r in lines) _fen(cell(r, iPaid))];
-    if (at == null || paidEach.any((p) => p == null) || _skipStatus.hasMatch(status)) continue;
-    // 每行一樣 = 成張單嘅實付（每件都寫一次）；唔一樣 = 每件嘅實付，要加埋
+    final paidEach = [
+      for (final r in lines)
+        if (cell(r, iPaid).isNotEmpty) _fen(cell(r, iPaid)),
+    ];
+    if (at == null || paidEach.isEmpty || paidEach.any((p) => p == null) || _skipStatus.hasMatch(status)) continue;
+    // 只得一個實付 = 成張單；每行一樣 = 每件都寫咗成張單嘅數；唔一樣 = 每件嘅實付，要加埋
     final same = paidEach.every((p) => p == paidEach.first);
-    final paid = lines.length > 1 && same ? paidEach.first! : paidEach.fold(0, (s, p) => s + p!);
+    final paid = same ? paidEach.first! : paidEach.fold(0, (s, p) => s + p!);
     if (paid <= 0) continue;
     out.add(
       TaobaoOrder(
