@@ -7,6 +7,7 @@ import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
 import 'app_spending_screen.dart';
+import 'place_spending_screen.dart';
 import 'common.dart';
 import 'theme.dart';
 
@@ -96,6 +97,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
             const SizedBox(height: 6),
             asyncBody(trend, (t) => _TrendCard(unit: unit, periods: t, type: type)),
+            PlaceSpendingCard(range),
             AppSpendingCard(range),
             _TagTotals(range),
           ],
