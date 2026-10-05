@@ -6,6 +6,7 @@ import '../money.dart';
 import 'gemini.dart';
 import 'parser.dart';
 import 'takeout.dart';
+import 'taobao.dart';
 
 /// 通知或者電郵嘅原始內容。
 class RawCapture {
@@ -164,17 +165,29 @@ class CaptureService {
   Future<bool> _isDuplicate(String id, RawCapture raw, ParsedPayment p) async {
     final from = raw.occurredAt.subtract(duplicateWindow);
     final to = raw.occurredAt.add(duplicateWindow);
-    final others =
+    final nearby =
         await (db.select(db.captures)..where(
               (c) =>
                   c.id.equals(id).not() &
                   c.sourceKey.equals(raw.sourceKey).not() &
-                  c.amount.equals(p.amount) &
+                  c.amount.isNotNull() &
                   c.status.isIn([CaptureStatus.pending.name, CaptureStatus.confirmed.name]) &
                   c.occurredAt.isBetweenValues(from, to),
             ))
             .get();
-    if (others.isNotEmpty) return true;
+    final others = nearby.where((c) => _sameAmount(raw.sourceKey, p.amount, c)).toList();
+    if (others.isNotEmpty) {
+      // 淘寶嘅港幣係估算：錢包通知有準確金額，就用通知嗰筆，淘寶未確認嗰筆當重複
+      final estimates = raw.sourceKey == taobaoSourceKey
+          ? const <Capture>[]
+          : others.where((c) => c.sourceKey == taobaoSourceKey && c.status == CaptureStatus.pending).toList();
+      if (estimates.isEmpty || estimates.length < others.length) return true;
+      for (final c in estimates) {
+        await (db.update(
+          db.captures,
+        )..where((t) => t.id.equals(c.id))).write(const CapturesCompanion(status: Value(CaptureStatus.duplicate)));
+      }
+    }
     final kind = _kindOf(p.isIncome, p.isTransfer);
     final manual = await ledger.transactions(from: from, to: to, kind: kind);
     return manual.any(
@@ -182,6 +195,13 @@ class CaptureService {
           t.amount == p.amount &&
           !const {EntrySource.notification, EntrySource.email, EntrySource.import}.contains(t.entry.source),
     );
+  }
+
+  /// 一樣金額先算同一筆；淘寶由人民幣換算，差 [taobaoAmountTolerance] 以內都算。
+  bool _sameAmount(String sourceKey, int amount, Capture other) {
+    if (other.amount == amount) return true;
+    if (sourceKey != taobaoSourceKey && other.sourceKey != taobaoSourceKey) return false;
+    return (other.amount! - amount).abs() <= (amount * taobaoAmountTolerance).ceil();
   }
 
   Future<String?> _suggestCategory(ParsedPayment p, List<Account> accounts) async {

@@ -9,8 +9,10 @@ import 'package:image_picker/image_picker.dart';
 import '../data/database.dart';
 import '../domain/capture/capture_service.dart';
 import '../domain/capture/gemini.dart';
+import '../domain/capture/parser.dart';
 import '../domain/capture/sources.dart';
 import '../domain/capture/takeout.dart';
+import '../domain/capture/taobao.dart';
 import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../providers.dart';
@@ -610,6 +612,27 @@ class _AutoCaptureSettingsScreenState extends ConsumerState<AutoCaptureSettingsS
           ),
           const SizedBox(height: 6),
           SectionCard(
+            title: '淘寶訂單',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  '1. 電腦登入淘寶，打開「已買到的寶貝」，撳「导出订单」下載 Excel（一次最多 10 頁）\n'
+                  '2. 將個檔擺上 Google Drive，撳下面個掣揀佢\n'
+                  '人民幣會換做港幣；未付款、取消同退款嘅訂單會略過，匯入過嘅唔會重複。',
+                  style: TextStyle(fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => importTaobao(context, ref),
+                  icon: const Icon(Icons.upload_file, size: 18),
+                  label: const Text('匯入淘寶訂單'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          SectionCard(
             title: 'Gemini 解析',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -861,7 +884,113 @@ Future<void> importTakeout(BuildContext context, WidgetRef ref) async {
   }
   if (!context.mounted) return;
 
-  final items = takeoutToCaptures(purchases, since: cutoff);
+  await _runImport(context, ref, takeoutToCaptures(purchases, since: cutoff), nothing: '冇新嘅購買');
+}
+
+/// 揀淘寶「导出订单」嘅 Excel（或者 extension 匯出嘅 JSON），將訂單換算港幣放入待確認。
+Future<void> importTaobao(BuildContext context, WidgetRef ref) async {
+  final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'json']);
+  final path = picked.firstOrNull?.path;
+  if (path == null || !context.mounted) return;
+  final List<TaobaoOrder> orders;
+  try {
+    orders = await readTaobaoExport(path);
+  } catch (e) {
+    if (context.mounted) showError(context, e);
+    return;
+  }
+  if (!context.mounted) return;
+  if (orders.isEmpty) {
+    showError(context, '入面冇已付款嘅訂單');
+    return;
+  }
+
+  final since = await ref.read(captureSyncProvider).appStartedAt();
+  final older = since == null ? 0 : orders.where((o) => o.at.isBefore(since)).length;
+  DateTime? cutoff;
+  if (older > 0 && context.mounted) {
+    final all = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('搵到 ${orders.length} 張淘寶訂單'),
+        content: Text('其中 $older 張係 ${formatDate(since!, withYear: true)} 開始用 app 之前。要唔要都匯入？'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('全部匯入')),
+          FilledButton(onPressed: () => Navigator.pop(c, false), child: const Text('只入之後')),
+        ],
+      ),
+    );
+    if (all == null) return;
+    if (!all) cutoff = since;
+  }
+  if (!context.mounted) return;
+
+  final db = ref.read(databaseProvider);
+  final saved = double.tryParse(await db.getSetting(SettingKeys.cnyHkdRate) ?? '');
+  final live = await fetchCnyToHkd();
+  if (!context.mounted) return;
+  final rate = await _askRate(context, live ?? saved ?? defaultCnyHkdRate, live: live != null);
+  if (rate == null || !context.mounted) return;
+  await db.setSetting(SettingKeys.cnyHkdRate, '$rate');
+  if (!context.mounted) return;
+  await _runImport(
+    context,
+    ref,
+    taobaoToCaptures(orders, rate: rate, since: cutoff),
+    nothing: '冇新嘅訂單',
+  );
+}
+
+/// 冇網又未用過時嘅預設匯率（1 人民幣兌港幣）。
+const defaultCnyHkdRate = 1.09;
+
+Future<double?> _askRate(BuildContext context, double initial, {required bool live}) {
+  final controller = TextEditingController(text: initial.toStringAsFixed(4));
+  return showDialog<double>(
+    context: context,
+    builder: (c) {
+      void submit() {
+        final v = double.tryParse(controller.text.trim());
+        if (v != null && v > 0.5 && v < 2) Navigator.pop(c, v);
+      }
+
+      return AlertDialog(
+        title: const Text('人民幣換港幣'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              live ? '今日匯率，可以改做你張卡或者 AlipayHK 實際用嘅匯率。' : '攞唔到今日匯率，用緊上次嘅數，可以自己改。',
+              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(prefixText: '1 人民幣 = ', suffixText: '港幣'),
+              onSubmitted: (_) => submit(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('取消')),
+          FilledButton(onPressed: submit, child: const Text('匯入')),
+        ],
+      );
+    },
+  );
+}
+
+/// 匯入固定格式嘅記錄（Takeout、淘寶），顯示進度同結果，有新嘅就打開待確認。
+Future<void> _runImport(
+  BuildContext context,
+  WidgetRef ref,
+  List<(RawCapture, ParsedPayment)> items, {
+  required String nothing,
+}) async {
   final job = ref.read(captureSyncProvider).importTakeout(items);
   final report = await showDialog<SyncReport>(
     context: context,
@@ -896,7 +1025,7 @@ Future<void> importTakeout(BuildContext context, WidgetRef ref) async {
   await showDialog<void>(
     context: context,
     builder: (c) => AlertDialog(
-      title: Text(report.added + report.autoConfirmed > 0 ? '匯入完成' : '冇新嘅購買'),
+      title: Text(report.added + report.autoConfirmed > 0 ? '匯入完成' : nothing),
       content: Text(msg.isEmpty ? '揀咗嘅時間入面冇購買' : msg.join('\n')),
       actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('好'))],
     ),
