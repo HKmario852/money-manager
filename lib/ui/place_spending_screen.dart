@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/database.dart';
+import '../domain/ledger.dart';
 import '../domain/money.dart';
 import '../domain/place_spending.dart';
 import '../providers.dart';
@@ -28,11 +31,11 @@ final placeSpendingProvider = Provider.autoDispose.family<AsyncValue<List<PlaceS
   return ref.watch(transactionsProvider(filter)).whenData(groupByPlace);
 });
 
-/// 匯入時記低嘅貨品（例如淘寶訂單嘅商品名），按入帳記錄 id。
-final boughtItemsProvider = FutureProvider.autoDispose<Map<String, String>>((ref) async {
+/// 已入帳淘寶訂單嘅詳情（商品、相），按入帳記錄 id。
+final orderInfoProvider = FutureProvider.autoDispose<Map<String, OrderInfo>>((ref) async {
   final db = ref.watch(databaseProvider);
   ref.watch(pendingCapturesProvider); // 入帳之後再讀
-  return loadBoughtItems(db);
+  return loadOrderInfo(db);
 });
 
 class _PlaceRow extends StatelessWidget {
@@ -220,7 +223,7 @@ class PlaceDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final places = ref.watch(placeSpendingProvider(range));
     final accounts = ref.watch(accountMapProvider);
-    final items = ref.watch(boughtItemsProvider).value ?? const {};
+    final orders = ref.watch(orderInfoProvider).value ?? const {};
     return Scaffold(
       appBar: AppBar(title: Text(part ?? name)),
       body: asyncBody(places, (list) {
@@ -277,30 +280,212 @@ class PlaceDetailScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   for (final t in place.txs)
-                    if (items[t.entry.id] case final bought?)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TxTile(t, accounts: accounts),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(72, 0, 16, 8),
-                            child: Text(
-                              bought,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppColors.muted, fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      TxTile(t, accounts: accounts),
+                    if (orders[t.entry.id] case final info?) _OrderTile(t, info) else TxTile(t, accounts: accounts),
                 ],
               ),
             ),
           ],
         );
       }),
+    );
+  }
+}
+
+/// 商品相；冇相或者載入唔到就用名第一個字。
+class _Thumb extends StatelessWidget {
+  const _Thumb(this.url, this.name, {this.size = 48});
+  final String? url;
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = AppIcon(name, null, size: size);
+    if (url == null) return fallback;
+    final px = (size * MediaQuery.devicePixelRatioOf(context)).round();
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.3),
+      child: Image.network(
+        url!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        cacheWidth: px,
+        errorBuilder: (_, _, _) => fallback,
+        loadingBuilder: (_, child, progress) =>
+            progress == null ? child : Container(width: size, height: size, color: AppColors.track),
+      ),
+    );
+  }
+}
+
+/// 一張淘寶訂單：相、買咗乜、日子同金額；撳入去睇詳情。
+class _OrderTile extends StatelessWidget {
+  const _OrderTile(this.tx, this.info);
+  final TxView tx;
+  final OrderInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = info.summary ?? tx.entry.merchant ?? '淘寶訂單';
+    return InkWell(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TaobaoOrderScreen(tx, info))),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            _Thumb(info.imageUrl, tx.entry.merchant ?? title),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [formatDate(tx.entry.occurredAt, withYear: true), ?tx.entry.merchant].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(formatMoney(tx.amount), style: const TextStyle(fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 淘寶訂單詳情：店舖、金額、訂單號，同每件貨嘅相、款式、數量、價錢。
+class TaobaoOrderScreen extends StatelessWidget {
+  const TaobaoOrderScreen(this.tx, this.info, {super.key});
+  final TxView tx;
+  final OrderInfo info;
+
+  @override
+  Widget build(BuildContext context) {
+    final shop = tx.entry.merchant ?? '淘寶';
+    return Scaffold(
+      appBar: AppBar(title: const Text('訂單')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        children: [
+          AppCard(
+            color: AppColors.ink,
+            padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  shop,
+                  style: const TextStyle(color: Color(0xFFB9BDC4), fontWeight: FontWeight.w600),
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: BigMoney(tx.amount, color: Colors.white, dimColor: const Color(0xFF8C9099), size: 36),
+                ),
+                Text(
+                  [formatDate(tx.entry.occurredAt, withYear: true), ?info.original].join(' · '),
+                  style: const TextStyle(color: Color(0xFFB9BDC4)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          AppCard(
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('訂單號 ${info.orderId}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                IconButton(
+                  tooltip: '複製訂單號',
+                  icon: const Icon(Icons.copy_rounded, size: 20),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: info.orderId));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已複製訂單號')));
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (info.items.isEmpty)
+            AppCard(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                info.summary ?? '冇商品資料。用新版淘寶 extension 再匯出同匯入一次，就會有商品名同相。',
+                style: const TextStyle(color: AppColors.muted),
+              ),
+            )
+          else
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(children: [for (final i in info.items) _ItemRow(i)]),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ItemRow extends StatelessWidget {
+  const _ItemRow(this.item);
+  final PurchaseItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final price = item.price == null ? null : '¥${(item.price! / 100).toStringAsFixed(2)}';
+    final url = item.url;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Thumb(item.imageUrl, item.title, size: 72),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (item.sku case final sku?)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(sku, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                  ),
+                const SizedBox(height: 4),
+                Text(['×${item.qty}', ?price].join(' · '), style: const TextStyle(fontWeight: FontWeight.w700)),
+                if (url != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                      onPressed: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+                      child: const Text('在淘寶睇'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -61,13 +61,44 @@ List<PlaceSpend> groupByPlace(Iterable<TxView> txs) {
   return list;
 }
 
-/// 淘寶匯入時記低嘅商品名，按入帳記錄 id（匯入內容第一行係商品，第二行係人民幣金額）。
-Future<Map<String, String>> loadBoughtItems(AppDatabase db) async {
+/// 一張匯入訂單（例如淘寶）嘅詳情。
+class OrderInfo {
+  OrderInfo({required this.externalId, this.summary, this.original, this.items = const []});
+  final String externalId;
+
+  /// 商品名一行，例如「手機殼 ×2、數據線」
+  final String? summary;
+
+  /// 原幣金額同匯率，例如「¥68.90 × 1.0850」
+  final String? original;
+  final List<PurchaseItem> items;
+
+  /// 訂單號（「taobao:」後面）
+  String get orderId => externalId.substring(externalId.indexOf(':') + 1);
+
+  /// 第一張有相嘅商品相
+  String? get imageUrl => items.map((i) => i.imageUrl).nonNulls.firstOrNull;
+}
+
+/// 已入帳嘅淘寶訂單詳情，按入帳記錄 id。匯入內容第一行係商品，最後一行係人民幣金額。
+Future<Map<String, OrderInfo>> loadOrderInfo(AppDatabase db) async {
   final rows = await (db.select(
     db.captures,
   )..where((c) => c.entryId.isNotNull() & c.sourceKey.equals(taobaoSourceKey))).get();
+  final items = <String, List<PurchaseItem>>{};
+  for (final i in await (db.select(db.purchaseItems)..orderBy([(i) => OrderingTerm(expression: i.position)])).get()) {
+    items.putIfAbsent(i.captureExternalId, () => []).add(i);
+  }
   return {
     for (final c in rows)
-      if (c.body.split('\n') case [final items, _, ...]) c.entryId!: items,
+      c.entryId!: switch (c.body.split('\n')) {
+        [final only] => OrderInfo(externalId: c.externalId, original: only, items: items[c.externalId] ?? const []),
+        final lines => OrderInfo(
+          externalId: c.externalId,
+          summary: lines.first,
+          original: lines.last,
+          items: items[c.externalId] ?? const [],
+        ),
+      },
   };
 }

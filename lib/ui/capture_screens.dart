@@ -975,6 +975,9 @@ Future<void> importTaobao(BuildContext context, WidgetRef ref) async {
     await db.setSetting(SettingKeys.cnyHkdRate, '$rate');
     if (!context.mounted) return;
   }
+  // 商品名、款式同相，睇訂單詳情用；再匯入會補返舊單
+  await saveTaobaoItems(db, picks);
+  if (!context.mounted) return;
   await _runImport(
     context,
     ref,

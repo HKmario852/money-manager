@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:money_manager/data/database.dart';
 
 void main() {
-  test('由第 2 版升級會開「購物 › 淘寶」，搬淘寶記錄', () async {
+  test('由第 2 版升級：開「購物 › 淘寶」、搬淘寶記錄、加訂單商品表', () async {
     final dir = Directory.systemTemp.createTempSync('mm');
     addTearDown(() => dir.deleteSync(recursive: true));
     final file = File('${dir.path}/db.sqlite');
@@ -28,6 +28,7 @@ void main() {
             categoryId: Value(shopping),
           ),
         );
+    await db.customStatement('DROP TABLE purchase_items'); // 第 4 版先有
     await db.customStatement('PRAGMA user_version = 2');
     await db.close();
 
@@ -36,5 +37,6 @@ void main() {
     final taobao = (await (db.select(db.accounts)..where((a) => a.name.equals('淘寶'))).get()).single;
     expect(taobao.parentId, shopping);
     expect((await db.select(db.captures).getSingle()).categoryId, taobao.id);
+    expect(await db.select(db.purchaseItems).get(), isEmpty); // 第 4 版加嘅表
   });
 }
