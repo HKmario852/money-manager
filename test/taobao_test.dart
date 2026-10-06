@@ -48,6 +48,11 @@ void main() {
     expect(o.paidFen, 6890);
   });
 
+  test('新舊 extension 嘅格式名都讀得', () {
+    final renamed = export.replaceFirst('money-expense-taobao', 'taobao-order-export');
+    expect(parseTaobaoExport(renamed)!.map((o) => o.id), ['3001', '3005']);
+  });
+
   test('唔係匯出檔返回 null', () {
     expect(parseTaobaoExport('[]'), isNull);
     expect(parseTaobaoExport('{"format":"other","orders":[]}'), isNull);

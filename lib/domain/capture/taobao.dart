@@ -12,8 +12,8 @@ import 'parser.dart';
 /// 淘寶訂單匯入嘅來源 key（用嚟記住淘寶用邊個賬戶俾錢，例如 AlipayHK）。
 const taobaoSourceKey = 'taobao';
 
-/// 淘寶訂單 extension 匯出嘅檔案格式名。
-const taobaoExportFormat = 'money-expense-taobao';
+/// 淘寶訂單 extension 匯出嘅檔案格式名：新版係 taobao-order-export，舊版檔係 money-expense-taobao。
+const taobaoExportFormats = {'taobao-order-export', 'money-expense-taobao'};
 
 /// 淘寶訂單入嘅分類：購物 › 淘寶，統計入面可以分開睇。
 const taobaoCategoryPath = '購物 › 淘寶';
@@ -105,7 +105,7 @@ List<TaobaoOrder>? parseTaobaoExport(String text) {
   } catch (_) {
     return null;
   }
-  if (data is! Map || data['format'] != taobaoExportFormat || data['orders'] is! List) return null;
+  if (data is! Map || !taobaoExportFormats.contains(data['format']) || data['orders'] is! List) return null;
   final out = <TaobaoOrder>[];
   for (final o in (data['orders'] as List).whereType<Map>()) {
     final id = '${o['id'] ?? ''}'.trim();
