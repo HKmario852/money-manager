@@ -206,6 +206,7 @@ Future<void> exportAndShare(BuildContext context, WidgetRef ref) async {
       attachmentsDir: ref.read(appPathsProvider).attachments,
       tempDir: tmp.path,
       password: password,
+      databaseKey: ref.read(databaseKeyProvider),
     );
     await SharePlus.instance.share(ShareParams(files: [XFile(zip)], subject: 'Money Expense 備份'));
   } catch (e) {

@@ -118,6 +118,6 @@ Sin un `android/key.properties`, la compilación release se firma con la clave d
 
 ## 📄 Licencia
 
-**Todavía no tiene licencia**, así que el autor se reserva todos los derechos. Puedes leer el código, pero necesitas permiso para reutilizarlo.
+Publicado con la [licencia MIT](../../LICENSE).
 
 Hecha con [Flutter](https://flutter.dev), [Drift](https://drift.simonbinder.eu), [Riverpod](https://riverpod.dev), [fl_chart](https://pub.dev/packages/fl_chart) y [Material Symbols](https://fonts.google.com/icons). Los tipos de cambio son del [Banco Central Europeo a través de Frankfurter](https://frankfurter.dev).

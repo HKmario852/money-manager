@@ -118,6 +118,6 @@ flutter build apk --release
 
 ## 📄 라이선스
 
-**아직 라이선스가 없습니다**. 모든 권리는 작성자에게 있습니다. 코드를 읽을 수는 있지만, 재사용하려면 허락이 필요합니다.
+[MIT 라이선스](../../LICENSE)로 공개합니다.
 
 [Flutter](https://flutter.dev), [Drift](https://drift.simonbinder.eu), [Riverpod](https://riverpod.dev), [fl_chart](https://pub.dev/packages/fl_chart), [Material Symbols](https://fonts.google.com/icons)로 만들었습니다. 환율은 [유럽중앙은행(Frankfurter 경유)](https://frankfurter.dev) 자료입니다.

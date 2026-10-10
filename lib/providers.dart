@@ -2,12 +2,15 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'data/database.dart';
+import 'data/database_key.dart';
+import 'data/encryption.dart';
 import 'domain/capture/capture_service.dart';
 import 'domain/capture/gemini.dart';
 import 'domain/capture/parser.dart';
@@ -31,9 +34,27 @@ class AppPaths {
 
 final appPathsProvider = Provider<AppPaths>((ref) => throw UnimplementedError());
 
+/// 資料庫金鑰，喺 main() 開 App 之前由 secure storage 讀出（見 data/database_key.dart）。
+final databaseKeyProvider = Provider<String>((ref) => throw UnimplementedError());
+
 final databaseProvider = Provider<AppDatabase>((ref) {
   final paths = ref.watch(appPathsProvider);
-  final db = AppDatabase(NativeDatabase.createInBackground(File(paths.database)));
+  final key = ref.watch(databaseKeyProvider);
+  var encrypted = true;
+  try {
+    // 舊版留低嘅明文資料庫、或者啱啱還原嘅備份：開之前就地加密
+    encryptIfPlaintext(paths.database, key);
+  } catch (e) {
+    // 加密失敗會還原返明文檔案；照用明文開，唔好令用戶開唔到 App，下次開 App 再試
+    debugPrint('Database encryption failed: $e');
+    encrypted = false;
+  }
+  final db = AppDatabase(
+    NativeDatabase.createInBackground(
+      File(paths.database),
+      setup: encrypted ? (raw) => applyDatabaseKey(raw, key) : null,
+    ),
+  );
   ref.onDispose(() async {
     try {
       await db.close();
@@ -230,6 +251,14 @@ final netWorthProvider = Provider<AsyncValue<(int assets, int liabilities)>>((re
 // ───────── 自動記錄 ─────────
 
 const _secure = FlutterSecureStorage();
+const databaseKeyStorageKey = 'database_key';
+
+/// 開 App 前讀資料庫金鑰（冇就整一條），同 Gemini key 一樣存喺 Android Keystore，唔入備份。
+Future<DatabaseKeyResult> loadAppDatabaseKey(AppPaths paths) => loadDatabaseKey(
+  databasePath: paths.database,
+  read: () => _secure.read(key: databaseKeyStorageKey),
+  write: (key) => _secure.write(key: databaseKeyStorageKey, value: key),
+);
 const geminiKeyStorageKey = 'gemini_api_key';
 
 /// Gemini API key，加密存喺手機（Android Keystore / iOS Keychain），唔入資料庫同備份。
