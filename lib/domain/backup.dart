@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' as sql;
 
 import '../data/database.dart';
+import '../data/encryption.dart';
 
 const backupDbName = 'money_manager.sqlite';
 const _backupPrefix = 'MoneyExpense_backup_';
@@ -18,11 +19,13 @@ class BackupException implements Exception {
 }
 
 /// 將資料庫同收據相打包成 zip，返回 zip 路徑。[password] 唔係空就用 AES 加密。
+/// 資料庫有加密就要俾 [databaseKey]：備份入面係明文資料庫，換咗手機（新金鑰）都還原到。
 Future<String> exportBackup(
   AppDatabase db, {
   required String attachmentsDir,
   required String tempDir,
   String? password,
+  String? databaseKey,
 }) async {
   // 清走之前匯出留低喺暫存嘅備份，唔好喺手機留多份明文副本
   await for (final f in Directory(tempDir).list()) {
@@ -34,6 +37,7 @@ Future<String> exportBackup(
     final dbCopy = p.join(work.path, backupDbName);
     // VACUUM INTO 喺資料庫開住嘅情況下都可以出一個一致嘅副本
     await db.customStatement('VACUUM INTO ?', [dbCopy]);
+    if (databaseKey != null) decryptCopy(dbCopy, databaseKey);
 
     final now = DateTime.now();
     String two(int v) => v.toString().padLeft(2, '0');
