@@ -43,7 +43,7 @@
 - 📊 **Where the money goes**: stats by category, week, month and year, spending per shop or place, and spending per app.
 - 🎯 **Budgets**: one for the whole month and one per category, with what you can still spend per day.
 - ⌨️ **Fast manual entry** with a keypad, tags, templates and receipt photos.
-- 🔒 **Private**: data stays on the phone. Optional fingerprint lock and password-encrypted (AES) backups.
+- 🔒 **Private**: records stay on the phone in an encrypted database. Optional fingerprint lock and password-encrypted (AES) backups. Gemini and the Gmail script send text to Google only if you turn them on.
 - ⬆️ **In-app updates** from this repository's GitHub Releases.
 
 ## 📥 Download
@@ -100,14 +100,14 @@ Without an `android/key.properties`, the release build is signed with the debug 
 - **State:** [Riverpod](https://riverpod.dev).
 - **Storage:** [Drift](https://drift.simonbinder.eu) on SQLite, as a double-entry ledger.
 - **Android code (Kotlin):** notification listener, Octopus NFC reader and app icons.
-- **Release:** GitHub Actions builds, tests and publishes a signed APK on every push to `main`.
+- **Release:** GitHub Actions builds and tests every push, and publishes a signed APK when the version in `pubspec.yaml` changes.
 
 ## 🔐 Privacy
 
-- Your records, receipts and settings are stored **only on your phone**. Android backup is turned off, so use the app's own backup to move data.
+- Your records, receipts and settings are stored **only on your phone**. The database is encrypted (SQLite3 Multiple Ciphers) with a key kept in Android's Keystore-protected storage. Android backup is turned off, so use the app's own backup to move data.
 - No account and no analytics. The app only connects to the internet for:
   - checking GitHub Releases for updates;
-  - the optional Gmail script and Gemini;
+  - the optional Gmail script and Gemini, which receive the text of receipts, notifications or screenshots they read;
   - app icons from Google Play or the App Store;
   - CNY→HKD exchange rates ([frankfurter.dev](https://frankfurter.dev), [open.er-api.com](https://open.er-api.com));
   - Taobao product pictures.
@@ -118,6 +118,6 @@ Without an `android/key.properties`, the release build is signed with the debug 
 
 ## 📄 License
 
-There is **no license yet**, so all rights are reserved by the author. You can read the code, but you need permission to reuse it.
+Released under the [MIT License](LICENSE).
 
 Built with [Flutter](https://flutter.dev), [Drift](https://drift.simonbinder.eu), [Riverpod](https://riverpod.dev), [fl_chart](https://pub.dev/packages/fl_chart) and [Material Symbols](https://fonts.google.com/icons). Exchange rates come from the [European Central Bank via Frankfurter](https://frankfurter.dev).

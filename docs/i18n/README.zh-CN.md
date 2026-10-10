@@ -107,7 +107,7 @@ flutter build apk --release
 - 你的记录、收据和设置**只保存在你的手机上**。Android 系统备份已关闭，迁移数据请用 App 自带的备份功能。
 - 无需注册，没有统计分析。App 仅在以下情况联网：
   - 到 GitHub Releases 检查更新；
-  - 可选的 Gmail 脚本和 Gemini；
+  - 可选的 Gmail 脚本和 Gemini（会收到它们要读取的收据、通知或截图内容）；
   - 从 Google Play 或 App Store 获取 App 图标；
   - 人民币兑港币汇率（[frankfurter.dev](https://frankfurter.dev)、[open.er-api.com](https://open.er-api.com)）；
   - 淘宝商品图片。
@@ -118,6 +118,6 @@ flutter build apk --release
 
 ## 📄 许可证
 
-目前**还没有许可证**，作者保留所有权利。你可以阅读代码，但复用前需要获得许可。
+以 [MIT 许可证](../../LICENSE) 发布。
 
 基于 [Flutter](https://flutter.dev)、[Drift](https://drift.simonbinder.eu)、[Riverpod](https://riverpod.dev)、[fl_chart](https://pub.dev/packages/fl_chart) 和 [Material Symbols](https://fonts.google.com/icons) 构建。汇率来自[欧洲央行（经 Frankfurter）](https://frankfurter.dev)。
